@@ -1,4 +1,4 @@
-package hanabi
+package main
 
 import (
 	"encoding/json"
@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strings"
 )
-
 
 func okResponse() []byte {
 	return []byte("{status: \"ok\"}")
@@ -52,22 +51,30 @@ func Handle(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		response, err = StartGame(v)
-	/*} else if strings.HasPrefix(pfx+"join-game") {
+	} else if strings.HasPrefix(req.URL.Path, pfx+"join-game") {
 		var v JoinGameRequest
-		if err = dec.Decode(&v); handleErr(err) {
+		if err = dec.Decode(&v); handleErr(err, w) {
 			return
 		}
-		resp, err = JoinGame(JoinGameRequest)*/
-		// TODO(jessk) handle more endpoints here
+		response = JoinGame(v)
+	} else if strings.HasPrefix(req.URL.Path, pfx+"dump-state") {
+		response = DumpState()
 	} else {
 		w.WriteHeader(404)
 		return
 	}
 	writeJson(w, response)
+	/*} else if strings.HasPrefix(pfx+"join-game") {
+	var v JoinGameRequest
+	if err = dec.Decode(&v); handleErr(err) {
+		return
+	}
+	resp, err = JoinGame(JoinGameRequest)*/
+	// TODO(jessk) handle more endpoints here
 }
 
 func main() {
-	Games = make([]Game, 0)
+	Games = make(map[string]Game)
 	port := flag.Int("port", 9001, "port to listen on")
 	flag.Parse()
 	serveStr := fmt.Sprintf(":%v", *port)
