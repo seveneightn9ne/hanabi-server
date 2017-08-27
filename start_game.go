@@ -12,20 +12,24 @@ type StartGameResponse struct {
 	Reason string `json:"reason,omitempty"`
 }
 
-func StartGame(state *ServerState, req StartGameRequest) (StartGameResponse, error) {
+func StartGame(state *ServerState, req_ interface{}) interface{} {
+	req, ok := req_.(*StartGameRequest)
+	if !ok {
+		return &StartGameResponse{"error", "cannot interpret the request as a StartGameRequest"}
+	}
 	state.GamesMapLock.Lock()
 	defer state.GamesMapLock.Unlock()
 	if req.Name == "" {
-		return StartGameResponse{"error", "missing required field \"name\""}, nil
+		return &StartGameResponse{"error", "missing required field \"name\""}
 	}
 	if _, ok := state.Games[req.Name]; ok {
-		return StartGameResponse{"error", "game with the same name exists"}, nil
+		return &StartGameResponse{"error", "game with the same name exists"}
 	}
 	if req.NumPlayers == 0 {
-		return StartGameResponse{"error", "missing required field \"num_players\""}, nil
+		return &StartGameResponse{"error", "missing required field \"num_players\""}
 	}
 	if req.NumPlayers < 2 || req.NumPlayers > 5 {
-		return StartGameResponse{"error", "must specify 2-5 players"}, nil
+		return &StartGameResponse{"error", "must specify 2-5 players"}
 	}
 	deck, cardsById := newDeck()
 	newGame := &Game{
@@ -47,7 +51,7 @@ func StartGame(state *ServerState, req StartGameRequest) (StartGameResponse, err
 		whoseTurn: 0,
 	}
 	state.Games[req.Name] = newGame
-	return StartGameResponse{"ok", ""}, nil
+	return &StartGameResponse{"ok", ""}
 }
 
 func newDeck() (Deck, map[int]Card) {

@@ -11,14 +11,18 @@ type JoinGameResponse struct {
 	Session SessionToken `json:"session,omitempty"`
 }
 
-func NewJoinGameResponseError(reason string) JoinGameResponse {
-	return JoinGameResponse{
+func NewJoinGameResponseError(reason string) *JoinGameResponse {
+	return &JoinGameResponse{
 		Status: "error",
 		Reason: reason,
 	}
 }
 
-func JoinGame(state *ServerState, req JoinGameRequest) JoinGameResponse {
+func JoinGame(state *ServerState, req_ interface{}) interface{} {
+	req, ok := req_.(*JoinGameRequest)
+	if !ok {
+		return NewJoinGameResponseError("cannot interpret the request as a StartGameRequest")
+	}
 	if req.GameName == "" {
 		return NewJoinGameResponseError("missing required field \"game_name\"")
 	}
@@ -33,7 +37,7 @@ func JoinGame(state *ServerState, req JoinGameRequest) JoinGameResponse {
 	if err != nil {
 		return NewJoinGameResponseError(err.Error())
 	}
-	return JoinGameResponse{
+	return &JoinGameResponse{
 		Status:  "ok",
 		Session: session,
 	}

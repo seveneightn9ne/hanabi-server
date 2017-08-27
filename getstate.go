@@ -13,14 +13,18 @@ type GetStateResponse struct {
 	State  GameStateSummary `json:"state,omitempty"`
 }
 
-func NewGetStateResponseError(reason string) GetStateResponse {
-	return GetStateResponse{
+func NewGetStateResponseError(reason string) *GetStateResponse {
+	return &GetStateResponse{
 		Status: "error",
 		Reason: reason,
 	}
 }
 
-func GetState(state *ServerState, req GetStateRequest) GetStateResponse {
+func GetState(state *ServerState, req_ interface{}) interface{} {
+	req, ok := req_.(*GetStateRequest)
+	if !ok {
+		return NewGetStateResponseError("cannot interpret the request as a StartGameRequest")
+	}
 	game := state.lookupGame(req.GameName)
 	if game == nil {
 		return NewGetStateResponseError("no game found with that name")
@@ -30,7 +34,7 @@ func GetState(state *ServerState, req GetStateRequest) GetStateResponse {
 	if err != nil {
 		return NewGetStateResponseError(err.Error())
 	}
-	return GetStateResponse{
+	return &GetStateResponse{
 		Status: "ok",
 		State:  gameState,
 	}
