@@ -95,11 +95,11 @@ func handleErr(err error, w http.ResponseWriter) bool {
 		log.Printf("Error: %v", err.Error())
 		w.WriteHeader(500)
 		writeJson(w, struct {
-			status  string
-			message string
+			Status  string `json:"status"`
+			Message string `json:"message"`
 		}{
-			status:  "error",
-			message: err.Error(),
+			Status:  "error",
+			Message: err.Error(),
 		})
 		return true
 	}
