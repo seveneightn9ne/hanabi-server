@@ -43,9 +43,9 @@ type Move struct {
 	Type MoveType `json:"type"`
 	// for Hint:
 	ToPlayer string `json:"to_player"`
-	Color    Color  `json:"color"`
-	Number   int    `json:"number"`
-	CardIds  []int  `json:"card_ids"`
+	Color    *Color `json:"color,omitempty"`
+	Number   *int   `json:"number,omitempty"`
+	CardIds  []int  `json:"card_ids,omitempty"`
 	// for Play/Discard:
 	CardId int `json:"card_id"`
 }
@@ -85,11 +85,11 @@ type Cardy interface {
 }
 type Deck []Card
 type Turn struct {
-	Id     int    `json:"id"`
-	Player string `json:"player"`
+	Id     int    `json:"id"`     // turn number starting at 0
+	Player string `json:"player"` // player that made the move
 	Move   Move   `json:"move"`
 	// no NewCard for Hint move
-	NewCard Card `json:"new_card"`
+	NewCard Cardy `json:"new_card"`
 }
 
 type GameStateSummary struct {
