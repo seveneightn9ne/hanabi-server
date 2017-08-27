@@ -28,14 +28,22 @@ type Server struct {
 }
 
 type ServerState struct {
-	Games     map[string]Game
-	GamesLock sync.Mutex
+	Games        map[string]*Game
+	GamesMapLock sync.Mutex // Lock that guards the mapping, not the Games.
+}
+
+// Get a game. Acquires GamesMapLock. Can return nil.
+func (s *ServerState) lookupGame(name string) *Game {
+	s.GamesMapLock.Lock()
+	defer s.GamesMapLock.Unlock()
+	game, _ := s.Games[name]
+	return game
 }
 
 func NewServer() *Server {
 	return &Server{
 		state: ServerState{
-			Games: make(map[string]Game),
+			Games: make(map[string]*Game),
 		},
 	}
 }
@@ -49,17 +57,13 @@ func (s *Server) Handle(w http.ResponseWriter, req *http.Request) {
 		if err = dec.Decode(&v); handleErr(err, w) {
 			return
 		}
-		s.state.GamesLock.Lock()
 		response, err = StartGame(&s.state, v)
-		s.state.GamesLock.Unlock()
 	} else if strings.HasPrefix(req.URL.Path, pfx+"join-game") {
 		var v JoinGameRequest
 		if err = dec.Decode(&v); handleErr(err, w) {
 			return
 		}
-		s.state.GamesLock.Lock()
 		response = JoinGame(&s.state, v)
-		s.state.GamesLock.Unlock()
 	} else {
 		w.WriteHeader(404)
 		return

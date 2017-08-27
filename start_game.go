@@ -13,6 +13,9 @@ type StartGameResponse struct {
 }
 
 func StartGame(state *ServerState, req StartGameRequest) (StartGameResponse, error) {
+	state.GamesMapLock.Lock()
+	defer state.GamesMapLock.Unlock()
+
 	if _, ok := state.Games[req.Name]; ok {
 		return StartGameResponse{"error", "game with the same name exists"}, nil
 	}
@@ -20,7 +23,7 @@ func StartGame(state *ServerState, req StartGameRequest) (StartGameResponse, err
 		return StartGameResponse{"error", "must specify 2-5 players"}, nil
 	}
 	deck, cardsById := newDeck()
-	newGame := Game{
+	newGame := &Game{
 		Name:       req.Name,
 		players:    nil,
 		sessions:   make(map[string]SessionToken),

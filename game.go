@@ -135,14 +135,12 @@ func RandomSessionToken() (res SessionToken, err error) {
 	return SessionToken(hex.EncodeToString(bs)), nil
 }
 
+// Calling only methods that start with Locking is threadsafe.
 type Game struct {
 	// Immutable Fields
-	Name        string
-	NumPlayers  int
-	AddPlayer   chan AddPlayerCmd
-	Move        chan MoveRequest
-	RequestInfo chan InfoRequest
-	cardsById   map[int]Card
+	Name       string
+	NumPlayers int
+	cardsById  map[int]Card
 
 	// Mutable, private fields
 	players   []string
@@ -163,30 +161,6 @@ type AddPlayerCmd struct {
 type AddPlayerCmdRes struct {
 	err     error
 	session SessionToken
-}
-
-func (g *Game) DoGame() {
-	for len(g.players) < g.NumPlayers {
-		select {
-		case cmd := <-g.AddPlayer:
-			session, err := g.doAddPlayer(cmd.playerName)
-			cmd.resCh <- AddPlayerCmdRes{
-				session: session,
-				err:     err,
-			}
-		case r := <-g.RequestInfo:
-			r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
-		}
-	}
-	for g.whoseTurn != -1 {
-		select {
-		case r := <-g.RequestInfo:
-			r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
-		case r := <-g.Move:
-			r.Resp <- g.move(r.Move, r.Player)
-		}
-	}
-	// TODO the game is over, still respond to InfoRequests
 }
 
 func (g *Game) move(move Move, player string) MoveResponse {
@@ -226,7 +200,7 @@ func (g *Game) move(move Move, player string) MoveResponse {
 	return MoveResponse{Ok, g.InfoResponse(player, lastTurn)}
 }
 
-func (g *Game) doAddPlayer(playerName string) (session SessionToken, err error) {
+func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err error) {
 	if len(g.players) >= g.NumPlayers {
 		return session, fmt.Errorf("the game is full (%v/%v players)", len(g.players), g.NumPlayers)
 	}

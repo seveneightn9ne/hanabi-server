@@ -19,21 +19,17 @@ func NewJoinGameResponseError(reason string) JoinGameResponse {
 }
 
 func JoinGame(state *ServerState, req JoinGameRequest) JoinGameResponse {
-	if _, ok := state.Games[req.GameName]; !ok {
+	game := state.lookupGame(req.GameName)
+	if game == nil {
 		return NewJoinGameResponseError("no game found with that name")
 	}
 
-	resCh := make(chan AddPlayerCmdRes)
-	state.Games[req.GameName].AddPlayer <- AddPlayerCmd{
-		playerName: req.PlayerName,
-		resCh:      resCh,
-	}
-	cmdRes := <-resCh
-	if cmdRes.err != nil {
-		NewJoinGameResponseError(cmdRes.err.Error())
+	session, err := game.LockingAddPlayer(req.PlayerName)
+	if err != nil {
+		return NewJoinGameResponseError(err.Error())
 	}
 	return JoinGameResponse{
 		Status: "ok",
-		Token:  cmdRes.session,
+		Token:  session,
 	}
 }
