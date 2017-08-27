@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type JoinGameRequest struct {
 	GameName   string `json:"game_name"`
 	PlayerName string `json:"player_name"`
@@ -15,7 +17,7 @@ func JoinGame(req JoinGameRequest) JoinGameResponse {
 	defer GamesLock.Unlock()
 	if g, ok := Games[req.GameName]; ok {
 		if len(g.players) >= g.NumPlayers {
-			return JoinGameResponse{"error", "this game is full"}
+			return JoinGameResponse{"error", fmt.Sprintf("this game is full (%v/%v players)", len(g.players), g.NumPlayers)}
 		}
 		for _, p := range g.players {
 			if p == req.PlayerName {

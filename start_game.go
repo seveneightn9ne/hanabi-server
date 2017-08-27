@@ -23,7 +23,7 @@ func StartGame(req StartGameRequest) (StartGameResponse, error) {
 	}
 	newGame := Game{
 		Name:       req.Name,
-		players:    make([]string, req.NumPlayers),
+		players:    nil,
 		NumPlayers: req.NumPlayers,
 		turns:      make([]Turn, 0),
 		deck:       newDeck(),
