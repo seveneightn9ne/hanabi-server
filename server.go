@@ -49,6 +49,7 @@ func NewServer() *Server {
 }
 
 func (s *Server) Handle(w http.ResponseWriter, req *http.Request) {
+	log.Printf("Request to %v", req.URL.Path)
 	dec := json.NewDecoder(req.Body)
 	var response interface{}
 	var err error

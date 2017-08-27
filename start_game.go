@@ -9,15 +9,20 @@ type StartGameRequest struct {
 
 type StartGameResponse struct {
 	Status string `json:"status"`
-	Reason string `json:"reason"`
+	Reason string `json:"reason,omitempty"`
 }
 
 func StartGame(state *ServerState, req StartGameRequest) (StartGameResponse, error) {
 	state.GamesMapLock.Lock()
 	defer state.GamesMapLock.Unlock()
-
+	if req.Name == "" {
+		return StartGameResponse{"error", "missing required field \"name\""}, nil
+	}
 	if _, ok := state.Games[req.Name]; ok {
 		return StartGameResponse{"error", "game with the same name exists"}, nil
+	}
+	if req.NumPlayers == 0 {
+		return StartGameResponse{"error", "missing required field \"num_players\""}, nil
 	}
 	if req.NumPlayers < 2 || req.NumPlayers > 5 {
 		return StartGameResponse{"error", "must specify 2-5 players"}, nil
