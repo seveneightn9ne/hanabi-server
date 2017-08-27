@@ -198,7 +198,7 @@ func (g *Game) LockingGetState(playerName string, session SessionToken, wait boo
 		return res, err
 	}
 	for {
-		res, err = g.getStateSummary(playerName, 0)
+		res, err = g.lockingGetStateSummary(playerName, 0)
 		if err != nil {
 			return res, err
 		}
@@ -238,6 +238,12 @@ func (g *Game) hasPlayer(playerName string) bool {
 		}
 	}
 	return false
+}
+
+func (g *Game) lockingGetStateSummary(player string, turnCursor int) (GameStateSummary, error) {
+	g.Lock()
+	defer g.Unlock()
+	return g.getStateSummary(player, turnCursor)
 }
 
 func (g *Game) getStateSummary(player string, turnCursor int) (GameStateSummary, error) {
