@@ -103,6 +103,23 @@ type InfoRequest struct {
 	Resp       chan InfoResponse
 }
 
+type DoTurnRequest struct {
+	Turn Turn
+	Resp chan DoTurnResponse
+}
+
+type DoTurnResponse struct {
+	Response DoTurnResponseType
+	Info     InfoResponse
+	// Maybe we want more info, like if a bomb went off
+}
+type DoTurnResponseType int
+
+const (
+	Ok DoTurnResponseType = iota
+	NotYourTurn
+)
+
 type Game struct {
 	// Immutable Fields
 	Name        string
@@ -134,6 +151,14 @@ func (g *Game) DoGame() {
 		}
 	}
 	// TODO: now play the game
+	for g.whoseTurn != -1 {
+		select {
+		case r := <-g.RequestInfo:
+			r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
+		case t := g.DoTurn:
+			g.DoTurn(t)
+		}
+	}
 }
 
 func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {
