@@ -1,7 +1,17 @@
-.phony: all run
+.phony: all run clean watch
 
-all:
-	echo "try 'make run'"
+BINARY=hanabi-server
 
-run:
-	go run *.go
+all: hanabi-server
+
+$(BINARY):
+	go build
+
+run: $(BINARY)
+	./$(BINARY)
+
+watch:
+	ls *.go | entr -r sh -c "make run"
+
+clean:
+	rm -f ./$(BINARY)
