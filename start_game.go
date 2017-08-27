@@ -12,10 +12,8 @@ type StartGameResponse struct {
 	Reason string `json:"reason"`
 }
 
-func StartGame(req StartGameRequest) (StartGameResponse, error) {
-	GamesLock.Lock()
-	defer GamesLock.Unlock()
-	if _, ok := Games[req.Name]; ok {
+func StartGame(state *ServerState, req StartGameRequest) (StartGameResponse, error) {
+	if _, ok := state.Games[req.Name]; ok {
 		return StartGameResponse{"error", "game with the same name exists"}, nil
 	}
 	if req.NumPlayers < 2 || req.NumPlayers > 5 {
@@ -25,6 +23,7 @@ func StartGame(req StartGameRequest) (StartGameResponse, error) {
 	newGame := Game{
 		Name:       req.Name,
 		players:    nil,
+		sessions:   make(map[string]SessionToken),
 		NumPlayers: req.NumPlayers,
 		turns:      make([]Turn, 0),
 		deck:       deck,
@@ -39,7 +38,7 @@ func StartGame(req StartGameRequest) (StartGameResponse, error) {
 		cardsById: cardsById,
 		whoseTurn: 0,
 	}
-	Games[req.Name] = newGame
+	state.Games[req.Name] = newGame
 	return StartGameResponse{"ok", ""}, nil
 }
 

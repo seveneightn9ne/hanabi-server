@@ -10,7 +10,7 @@ $(BINARY):
 run: $(BINARY)
 	./$(BINARY)
 
-watch:
+watch: $(BINARY)
 	ls *.go | entr -r sh -c "make run"
 
 clean:

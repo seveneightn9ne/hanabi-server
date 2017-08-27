@@ -1,6 +1,9 @@
 package main
 
-import "sync"
+import (
+	"encoding/hex"
+	"fmt"
+)
 
 type MoveType int
 
@@ -121,17 +124,29 @@ const (
 	NotYourTurn
 )
 
+// 64-bit hex
+type SessionToken string
+
+func RandomSessionToken() (res SessionToken, err error) {
+	bs, err := RandBytes(8)
+	if err != nil {
+		return res, err
+	}
+	return SessionToken(hex.EncodeToString(bs)), nil
+}
+
 type Game struct {
 	// Immutable Fields
 	Name        string
 	NumPlayers  int
-	AddPlayer   chan string
+	AddPlayer   chan AddPlayerCmd
 	Move        chan MoveRequest
 	RequestInfo chan InfoRequest
 	cardsById   map[int]Card
 
 	// Mutable, private fields
 	players   []string
+	sessions  map[string]SessionToken // player -> session token
 	turns     []Turn
 	deck      Deck
 	hands     map[string][]Card
@@ -140,14 +155,25 @@ type Game struct {
 	whoseTurn int // Index into players. Use -1 when game is over
 }
 
-var Games map[string]Game
-var GamesLock sync.Mutex
+type AddPlayerCmd struct {
+	playerName string
+	resCh      chan<- AddPlayerCmdRes
+}
+
+type AddPlayerCmdRes struct {
+	err     error
+	session SessionToken
+}
 
 func (g *Game) DoGame() {
 	for len(g.players) < g.NumPlayers {
 		select {
-		case p := <-g.AddPlayer:
-			g.players = append(g.players, p)
+		case cmd := <-g.AddPlayer:
+			session, err := g.doAddPlayer(cmd.playerName)
+			cmd.resCh <- AddPlayerCmdRes{
+				session: session,
+				err:     err,
+			}
 		case r := <-g.RequestInfo:
 			r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
 		}
@@ -198,6 +224,24 @@ func (g *Game) move(move Move, player string) MoveResponse {
 		// TODO Add to Discard
 	}
 	return MoveResponse{Ok, g.InfoResponse(player, lastTurn)}
+}
+
+func (g *Game) doAddPlayer(playerName string) (session SessionToken, err error) {
+	if len(g.players) >= g.NumPlayers {
+		return session, fmt.Errorf("the game is full (%v/%v players)", len(g.players), g.NumPlayers)
+	}
+	for _, p := range g.players {
+		if p == playerName {
+			return session, fmt.Errorf("player with that name is already in the game")
+		}
+	}
+	session, err = RandomSessionToken()
+	if err != nil {
+		return session, fmt.Errorf("error generating session token")
+	}
+	g.players = append(g.players, playerName)
+	g.sessions[playerName] = session
+	return session, nil
 }
 
 func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {

@@ -1,32 +1,39 @@
 package main
 
-import "fmt"
-
 type JoinGameRequest struct {
 	GameName   string `json:"game_name"`
 	PlayerName string `json:"player_name"`
 }
 
 type JoinGameResponse struct {
-	Status string `json:"status"`
-	Reason string `json:"reason"`
+	Status string       `json:"status"`
+	Reason string       `json:"reason"`
+	Token  SessionToken `json:"token"`
 }
 
-func JoinGame(req JoinGameRequest) JoinGameResponse {
-	GamesLock.Lock()
-	defer GamesLock.Unlock()
-	if g, ok := Games[req.GameName]; ok {
-		if len(g.players) >= g.NumPlayers {
-			return JoinGameResponse{"error", fmt.Sprintf("this game is full (%v/%v players)", len(g.players), g.NumPlayers)}
-		}
-		for _, p := range g.players {
-			if p == req.PlayerName {
-				return JoinGameResponse{"error", "player with that name is already in the game"}
-			}
-		}
-		g.players = append(g.players, req.PlayerName)
-		return JoinGameResponse{"ok", ""}
-	} else {
-		return JoinGameResponse{"error", "no game found with that name"}
+func NewJoinGameResponseError(reason string) JoinGameResponse {
+	return JoinGameResponse{
+		Status: "error",
+		Reason: reason,
+	}
+}
+
+func JoinGame(state *ServerState, req JoinGameRequest) JoinGameResponse {
+	if _, ok := state.Games[req.GameName]; !ok {
+		return NewJoinGameResponseError("no game found with that name")
+	}
+
+	resCh := make(chan AddPlayerCmdRes)
+	state.Games[req.GameName].AddPlayer <- AddPlayerCmd{
+		playerName: req.PlayerName,
+		resCh:      resCh,
+	}
+	cmdRes := <-resCh
+	if cmdRes.err != nil {
+		NewJoinGameResponseError(cmdRes.err.Error())
+	}
+	return JoinGameResponse{
+		Status: "ok",
+		Token:  cmdRes.session,
 	}
 }
