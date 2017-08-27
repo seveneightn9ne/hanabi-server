@@ -8,7 +8,7 @@ type JoinGameRequest struct {
 type JoinGameResponse struct {
 	Status string       `json:"status"`
 	Reason string       `json:"reason"`
-	Token  SessionToken `json:"token"`
+	Token  SessionToken `json:"token,omitempty"`
 }
 
 func NewJoinGameResponseError(reason string) JoinGameResponse {

@@ -153,16 +153,6 @@ type Game struct {
 	whoseTurn int // Index into players. Use -1 when game is over
 }
 
-type AddPlayerCmd struct {
-	playerName string
-	resCh      chan<- AddPlayerCmdRes
-}
-
-type AddPlayerCmdRes struct {
-	err     error
-	session SessionToken
-}
-
 func (g *Game) move(move Move, player string) MoveResponse {
 	lastTurn := len(g.turns)
 	if player != g.players[g.whoseTurn] {
