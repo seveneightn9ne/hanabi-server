@@ -39,7 +39,7 @@ type Move struct {
 	ToPlayer string `json:"to_player"`
 	Color    Color  `json:"color"`
 	Number   int    `json:"number"`
-	CardIds []int `json:"card_ids"`
+	CardIds  []int  `json:"card_ids"`
 	// for Play/Discard:
 	CardId int `json:"card_id"`
 }
@@ -48,17 +48,21 @@ type Card struct {
 	Color  Color `json:"color"`
 	Number int   `json:"number"`
 }
+
 func (f *Card) Id() int {
-    return f.Id
+	return f.Id
 }
+
 type HiddenCard struct {
-    Id int `json:"id"`
+	Id int `json:"id"`
 }
+
 func (h *HiddenCard) Id() int {
-    return h.Id
+	return h.Id
 }
+
 type Cardy interface {
-    Id() int
+	Id() int
 }
 type Deck []Card
 type Turn struct {
@@ -70,66 +74,74 @@ type Turn struct {
 }
 
 type InfoResponse struct {
-    State GameState         `json:"state"`
-    Players []string  `json:"players"`
-    Hands map[string][]Card `json:"hands"`
-    Board map[Color]int     `json:"board"`
-    Discard []Card `json:"discard"`
-    Turns []Turn `json:"turns"`
+	State      GameState         `json:"state"`
+	Players    []string          `json:"players"`
+	Hands      map[string][]Card `json:"hands"`
+	Board      map[Color]int     `json:"board"`
+	Discard    []Card            `json:"discard"`
+	Turns      []Turn            `json:"turns"`
+	TurnCursor int               `json:"turn_cursor"`
 }
 
 type InfoRequest struct {
-    Player string
-    TurnCursor int
-    Resp   chan InfoResponse
+	Player     string
+	TurnCursor int
+	Resp       chan InfoResponse
 }
 
 type Game struct {
 	// Immutable Fields
-	Name       string
-	NumPlayers int
-	AddPlayer  chan string
-	DoTurn     chan Turn
+	Name        string
+	NumPlayers  int
+	AddPlayer   chan string
+	DoTurn      chan Turn
 	RequestInfo chan InfoRequest
 
 	// Mutable, private fields
-	players    []string
-	turns      []Turn
-	deck       Deck
-	hands      map[string][]Card
-	board      map[Color]int
-	discard    []Card
+	players   []string
+	turns     []Turn
+	deck      Deck
+	hands     map[string][]Card
+	board     map[Color]int
+	discard   []Card
+	whoseTurn int // Index into players. Use -1 when game is over
 }
 
 var Games map[string]Game
 var GamesLock sync.Mutex
 
 func (g *Game) DoGame() {
-    for len(g.players) < g.NumPlayers {
-	select {
-	case p := <- g.AddPlayer:
-	    g.players = append(g.Players, p)
-	case r := <- g.RequestInfo:
-	    r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
+	for len(g.players) < g.NumPlayers {
+		select {
+		case p := <-g.AddPlayer:
+			g.players = append(g.Players, p)
+		case r := <-g.RequestInfo:
+			r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
+		}
 	}
-    }
-    // TODO: now play the game
+	// TODO: now play the game
 }
 
 func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {
-    var resp InfoResponse
-    // fill these no matter what
-    resp.Players = g.players
-    resp.Board = g.board
-    resp.Discard = g.discard
-    resp.Hands = sanitize(g.hands, player)
-
-    if len(g.players < g.NumPlayers {
-	// Game has not started yet
-	resp.State = NotStarted
+	var resp InfoResponse
+	// fill these no matter what
 	resp.Players = g.players
+	resp.Board = g.board
+	resp.Discard = g.discard
+	resp.Hands = sanitize(g.hands, player)
 
-    }
-    return resp
+	if len(g.players) < g.NumPlayers {
+		// Game has not started yet
+		resp.State = NotStarted
+		return resp
+	} else if g.whoseTurn == -1 {
+		resp.State = Finished
+	} else if g.players[g.whoseTurn] == player {
+		resp.State = YourTurn
+	} else {
+		resp.State = WaitingForTurn
+	}
+	resp.Turns = g.turns[turnCursor:]
+	resp.TurnCursor = len(g.turns)
+	return resp
 }
-
