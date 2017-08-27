@@ -23,18 +23,18 @@ func StartGame(req StartGameRequest) (StartGameResponse, error) {
 	}
 	newGame := Game{
 		Name:       req.Name,
-		Players:    make([]string, req.NumPlayers),
+		players:    make([]string, req.NumPlayers),
 		NumPlayers: req.NumPlayers,
-		Turns:      make([]Turn, 0),
-		Deck:       newDeck(),
-		Hands:      make(map[string][]Card, req.NumPlayers),
-		Board: map[Color]int{
+		turns:      make([]Turn, 0),
+		deck:       newDeck(),
+		hands:      make(map[string][]Card, req.NumPlayers),
+		board: map[Color]int{
 			White:  0,
 			Blue:   0,
 			Red:    0,
 			Green:  0,
 			Yellow: 0},
-		Discard: make([]Card, 0),
+		discard: make([]Card, 0),
 	}
 	Games[req.Name] = newGame
 	return StartGameResponse{"ok", ""}, nil

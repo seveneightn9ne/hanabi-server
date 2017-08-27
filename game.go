@@ -43,26 +43,39 @@ type Move struct {
 	// for Play/Discard:
 	CardId int `json:"card_id"`
 }
+
 type Card struct {
 	Id     int   `json:"id"`
 	Color  Color `json:"color"`
 	Number int   `json:"number"`
 }
 
-func (f *Card) Id() int {
+// Card implements Cardy
+var _ Cardy = (*Card)(nil)
+
+func (f *Card) GetId() int {
 	return f.Id
+}
+
+func (f *Card) Hide() HiddenCard {
+	return HiddenCard{
+		Id: f.Id,
+	}
 }
 
 type HiddenCard struct {
 	Id int `json:"id"`
 }
 
-func (h *HiddenCard) Id() int {
+// HiddenCard implements Cardy
+var _ Cardy = (*HiddenCard)(nil)
+
+func (h *HiddenCard) GetId() int {
 	return h.Id
 }
 
 type Cardy interface {
-	Id() int
+	GetId() int
 }
 type Deck []Card
 type Turn struct {
@@ -76,7 +89,8 @@ type Turn struct {
 type InfoResponse struct {
 	State      GameState         `json:"state"`
 	Players    []string          `json:"players"`
-	Hands      map[string][]Card `json:"hands"`
+	Hand       []HiddenCard      `json:"hand"`        // the focused player's hand
+	OtherHands map[string][]Card `json:"other_hands"` // the other player's hands
 	Board      map[Color]int     `json:"board"`
 	Discard    []Card            `json:"discard"`
 	Turns      []Turn            `json:"turns"`
@@ -114,7 +128,7 @@ func (g *Game) DoGame() {
 	for len(g.players) < g.NumPlayers {
 		select {
 		case p := <-g.AddPlayer:
-			g.players = append(g.Players, p)
+			g.players = append(g.players, p)
 		case r := <-g.RequestInfo:
 			r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
 		}
@@ -128,7 +142,8 @@ func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {
 	resp.Players = g.players
 	resp.Board = g.board
 	resp.Discard = g.discard
-	resp.Hands = sanitize(g.hands, player)
+	resp.Hand = g.hiddenPlayerHand(player)
+	resp.OtherHands = g.otherHands(player)
 
 	if len(g.players) < g.NumPlayers {
 		// Game has not started yet
@@ -145,3 +160,30 @@ func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {
 	resp.TurnCursor = len(g.turns)
 	return resp
 }
+
+// The hand of a player, as hidden cards
+func (g *Game) hiddenPlayerHand(player string) []HiddenCard {
+	panic("todo")
+}
+
+// The hands of the players _except_ the specified player.
+func (g *Game) otherHands(exceptPlayer string) map[string][]Card {
+	panic("todo")
+}
+
+// // Take hands and hide the hand of the player.
+// func hideCards(hands hands, player string) map[string][]Card {
+// 	ret := make(map[string][]Card)
+// 	for p, hand := range hands {
+// 		if p == player {
+// 			// Hide the cards for the player.
+// 			ret[p] = nil
+// 			for _, card := range hand {
+// 				ret[p] = append(ret[p], card.Hide())
+// 			}
+// 		} else {
+// 			// Pass through the other hands unmodified.
+// 			ret[p] = hand
+// 		}
+// 	}
+// }

@@ -14,15 +14,15 @@ func JoinGame(req JoinGameRequest) JoinGameResponse {
 	GamesLock.Lock()
 	defer GamesLock.Unlock()
 	if g, ok := Games[req.GameName]; ok {
-		if len(g.Players) >= g.NumPlayers {
+		if len(g.players) >= g.NumPlayers {
 			return JoinGameResponse{"error", "this game is full"}
 		}
-		for _, p := range g.Players {
+		for _, p := range g.players {
 			if p == req.PlayerName {
 				return JoinGameResponse{"error", "player with that name is already in the game"}
 			}
 		}
-		g.Players = append(g.Players, req.PlayerName)
+		g.players = append(g.players, req.PlayerName)
 		return JoinGameResponse{"ok", ""}
 	} else {
 		return JoinGameResponse{"error", "no game found with that name"}
