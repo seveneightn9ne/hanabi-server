@@ -6,9 +6,9 @@ type JoinGameRequest struct {
 }
 
 type JoinGameResponse struct {
-	Status string       `json:"status"`
-	Reason string       `json:"reason,omitempty"`
-	Token  SessionToken `json:"token,omitempty"`
+	Status  string       `json:"status"`
+	Reason  string       `json:"reason,omitempty"`
+	Session SessionToken `json:"session,omitempty"`
 }
 
 func NewJoinGameResponseError(reason string) JoinGameResponse {
@@ -34,7 +34,7 @@ func JoinGame(state *ServerState, req JoinGameRequest) JoinGameResponse {
 		return NewJoinGameResponseError(err.Error())
 	}
 	return JoinGameResponse{
-		Status: "ok",
-		Token:  session,
+		Status:  "ok",
+		Session: session,
 	}
 }

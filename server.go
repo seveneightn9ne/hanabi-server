@@ -65,6 +65,14 @@ func (s *Server) Handle(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		response = JoinGame(&s.state, v)
+	} else if strings.HasPrefix(req.URL.Path, pfx+"get-state") {
+		var v GetStateRequest
+		if err = dec.Decode(&v); handleErr(err, w) {
+			return
+		}
+		response = GetState(&s.state, v)
+	} else if strings.HasPrefix(req.URL.Path, pfx+"move") {
+		panic("TODO")
 	} else {
 		w.WriteHeader(404)
 		return

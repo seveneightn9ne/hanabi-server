@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
+	"sync"
 )
 
 type MoveType int
@@ -137,6 +139,8 @@ func RandomSessionToken() (res SessionToken, err error) {
 
 // Calling only methods that start with Locking is threadsafe.
 type Game struct {
+	sync.Mutex
+
 	// Immutable Fields
 	Name       string
 	NumPlayers int
@@ -191,6 +195,9 @@ func (g *Game) move(move Move, player string) MoveResponse {
 }
 
 func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err error) {
+	g.Lock()
+	defer g.Unlock()
+
 	if len(g.players) >= g.NumPlayers {
 		return session, fmt.Errorf("the game is full (%v/%v players)", len(g.players), g.NumPlayers)
 	}
@@ -206,6 +213,47 @@ func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err er
 	g.players = append(g.players, playerName)
 	g.sessions[playerName] = session
 	return session, nil
+}
+
+func (g *Game) LockingGetState(playerName string, session SessionToken, wait bool) error {
+	err := g.checkPlayerSession(playerName, session)
+	if err != nil {
+		return err
+	}
+	if wait {
+		return fmt.Errorf("'wait' not yet implemented")
+	}
+	return fmt.Errorf("TODO: LockingGetState")
+}
+
+// uses the game lock
+func (g *Game) checkPlayerSession(playerName string, session SessionToken) error {
+	g.Lock()
+	defer g.Unlock()
+	if !g.hasPlayer(playerName) {
+		return fmt.Errorf("no player '%v'", playerName)
+	}
+	s2, ok := g.sessions[playerName]
+	if !ok {
+		// this should never happen
+		return fmt.Errorf("missing session for '%v'", playerName)
+	}
+	if session == "" {
+		return fmt.Errorf("session is required")
+	}
+	if subtle.ConstantTimeCompare([]byte(s2), []byte(session)) != 1 {
+		return fmt.Errorf("invalid session for '%v'", playerName)
+	}
+	return nil
+}
+
+func (g *Game) hasPlayer(playerName string) bool {
+	for _, p2 := range g.players {
+		if playerName == p2 {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {

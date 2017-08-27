@@ -11,7 +11,7 @@ run: $(BINARY)
 	./$(BINARY)
 
 watch: $(BINARY)
-	ls *.go | entr -r sh -c "make run"
+	ls *.go | entr -r sh -c "make clean && make run"
 
 clean:
 	rm -f ./$(BINARY)
