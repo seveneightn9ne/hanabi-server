@@ -20,11 +20,11 @@ func main() {
 	server := NewServer()
 
 	path := "/hanabi/start-game"
-	http.HandleFunc(path, server.MakeHandler(path, StartGame))
+	http.HandleFunc(path, server.MakeHandler(path, StartGame, &StartGameRequest{}))
 	path = "/hanabi/join-game"
-	http.HandleFunc(path, server.MakeHandler(path, JoinGame))
+	http.HandleFunc(path, server.MakeHandler(path, JoinGame, &JoinGameRequest{}))
 	path = "/hanabi/get-state"
-	http.HandleFunc(path, server.MakeHandler(path, GetState))
+	http.HandleFunc(path, server.MakeHandler(path, GetState, &GetStateRequest{}))
 	path = "/hanabi/move"
 	// TODO handle move
 	log.Fatal(http.ListenAndServe(serveStr, nil))
@@ -55,31 +55,16 @@ func NewServer() *Server {
 	}
 }
 
-func pathToRequestStruct(path string) interface{} {
-	switch path {
-	case "/hanabi/start-game":
-		return &StartGameRequest{}
-	case "/hanabi/join-game":
-		return &JoinGameRequest{}
-	case "/hanabi/get-state":
-		return &GetStateRequest{}
-	case "/hanabi/move":
-		return nil // TODO
-	}
-	panic("Path " + path + " has no known request type")
-}
-
-func (s *Server) MakeHandler(path string, f func(*ServerState, interface{}) interface{}) func(http.ResponseWriter, *http.Request) {
+func (s *Server) MakeHandler(path string, f func(*ServerState, interface{}) interface{}, requestStruct interface{}) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		log.Printf("Request to %v", req.URL.Path)
 		dec := json.NewDecoder(req.Body)
 		var response interface{}
 		var err error
-		v := pathToRequestStruct(path)
-		if err = dec.Decode(&v); handleErr(err, w) {
+		if err = dec.Decode(&requestStruct); handleErr(err, w) {
 			return
 		}
-		response = f(&s.state, v)
+		response = f(&s.state, requestStruct)
 		writeJson(w, response)
 	}
 }
