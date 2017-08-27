@@ -103,20 +103,21 @@ type InfoRequest struct {
 	Resp       chan InfoResponse
 }
 
-type DoTurnRequest struct {
-	Turn Turn
-	Resp chan DoTurnResponse
+type MoveRequest struct {
+	Move   Move
+	Player string
+	Resp   chan MoveResponse
 }
 
-type DoTurnResponse struct {
-	Response DoTurnResponseType
+type MoveResponse struct {
+	Response MoveResponseType
 	Info     InfoResponse
 	// Maybe we want more info, like if a bomb went off
 }
-type DoTurnResponseType int
+type MoveResponseType int
 
 const (
-	Ok DoTurnResponseType = iota
+	Ok MoveResponseType = iota
 	NotYourTurn
 )
 
@@ -125,8 +126,9 @@ type Game struct {
 	Name        string
 	NumPlayers  int
 	AddPlayer   chan string
-	DoTurn      chan Turn
+	Move        chan MoveRequest
 	RequestInfo chan InfoRequest
+	cardsById   map[int]Card
 
 	// Mutable, private fields
 	players   []string
@@ -150,19 +152,52 @@ func (g *Game) DoGame() {
 			r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
 		}
 	}
-	// TODO: now play the game
 	for g.whoseTurn != -1 {
 		select {
 		case r := <-g.RequestInfo:
 			r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
-		case t := <-g.DoTurn:
-			g.doTurn(t)
+		case r := <-g.Move:
+			r.Resp <- g.move(r.Move, r.Player)
 		}
 	}
+	// TODO the game is over, still respond to InfoRequests
 }
 
-func (g *Game) doTurn(turn Turn) {
-	return
+func (g *Game) move(move Move, player string) MoveResponse {
+	lastTurn := len(g.turns)
+	if player != g.players[g.whoseTurn] {
+		return MoveResponse{NotYourTurn, g.InfoResponse(player, lastTurn)}
+	}
+	//type Move struct {
+	//Type MoveType `json:"type"`
+	//// for Hint:
+	//ToPlayer string `json:"to_player"`
+	//Color    Color  `json:"color"`
+	//Number   int    `json:"number"`
+	//CardIds  []int  `json:"card_ids"`
+	//for Play/Discard:
+	//CardId int `json:"card_id"`
+
+	//type Turn struct {
+	//Id     int    `json:"id"`
+	//Player string `json:"player"`
+	//Move   Move   `json:"move"`
+	// no NewCard for Hint move
+	//NewCard Card `json:"new_card"`
+	var turn Turn
+	turn.Id = g.turns[len(g.turns)-1].Id + 1
+	turn.Player = player
+	switch move.Type {
+	case Hint:
+		// TODO Make sure the hint is legal
+		//for _, card := range g.hands[move.ToPlayer] {
+		//}
+	case Play:
+		// TODO Bomb or edit board
+	case Discard:
+		// TODO Add to Discard
+	}
+	return MoveResponse{Ok, g.InfoResponse(player, lastTurn)}
 }
 
 func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {

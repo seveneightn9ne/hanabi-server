@@ -21,12 +21,13 @@ func StartGame(req StartGameRequest) (StartGameResponse, error) {
 	if req.NumPlayers < 2 || req.NumPlayers > 5 {
 		return StartGameResponse{"error", "must specify 2-5 players"}, nil
 	}
+	deck, cardsById := newDeck()
 	newGame := Game{
 		Name:       req.Name,
 		players:    nil,
 		NumPlayers: req.NumPlayers,
 		turns:      make([]Turn, 0),
-		deck:       newDeck(),
+		deck:       deck,
 		hands:      make(map[string][]Card, req.NumPlayers),
 		board: map[Color]int{
 			White:  0,
@@ -34,15 +35,18 @@ func StartGame(req StartGameRequest) (StartGameResponse, error) {
 			Red:    0,
 			Green:  0,
 			Yellow: 0},
-		discard: make([]Card, 0),
+		discard:   make([]Card, 0),
+		cardsById: cardsById,
+		whoseTurn: 0,
 	}
 	Games[req.Name] = newGame
 	return StartGameResponse{"ok", ""}, nil
 }
 
-func newDeck() Deck {
+func newDeck() (Deck, map[int]Card) {
 	numCards := 5 * (3 + 2 + 2 + 2 + 1)
 	cards := make([]Card, numCards)
+	cardsById := make(map[int]Card, numCards)
 	order := rand.Perm(numCards)
 	p_i := 0
 	for _, color := range Colors {
@@ -54,9 +58,10 @@ func newDeck() Deck {
 					Color:  color,
 					Number: number,
 				}
+				cardsById[order[p_i]] = cards[order[p_i]]
 				p_i++
 			}
 		}
 	}
-	return Deck(cards)
+	return Deck(cards), cardsById
 }
