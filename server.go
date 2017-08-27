@@ -94,6 +94,7 @@ func writeJson(w http.ResponseWriter, obj interface{}) {
 		log.Printf("Error during JSON marshal: %v\n", err)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(respStr))
 }
 

@@ -8,8 +8,9 @@ type GetStateRequest struct {
 }
 
 type GetStateResponse struct {
-	Status string `json:"status"`
-	Reason string `json:"reason"`
+	Status string           `json:"status"`
+	Reason string           `json:"reason"`
+	State  GameStateSummary `json:"state,omitempty"`
 }
 
 func NewGetStateResponseError(reason string) GetStateResponse {
@@ -25,11 +26,12 @@ func GetState(state *ServerState, req GetStateRequest) GetStateResponse {
 		return NewGetStateResponseError("no game found with that name")
 	}
 
-	err := game.LockingGetState(req.PlayerName, req.Session, req.Wait)
+	gameState, err := game.LockingGetState(req.PlayerName, req.Session, req.Wait)
 	if err != nil {
 		return NewGetStateResponseError(err.Error())
 	}
 	return GetStateResponse{
 		Status: "ok",
+		State:  gameState,
 	}
 }

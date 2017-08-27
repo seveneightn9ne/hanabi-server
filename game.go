@@ -5,34 +5,35 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sync"
+	"time"
 )
 
-type MoveType int
+type MoveType string
 
 const (
-	Hint MoveType = iota
-	Play
-	Discard
+	Hint    MoveType = "hint"
+	Play             = "play"
+	Discard          = "discard"
 )
 
-type Color int
+type Color string
 
 const (
-	Red Color = iota
-	Yellow
-	Green
-	Blue
-	Black
-	White
+	Red    Color = "red"
+	Yellow Color = "yellow"
+	Green  Color = "green"
+	Blue   Color = "blue"
+	Black  Color = "black"
+	White  Color = "white"
 )
 
-type GameState int
+type GameState string
 
 const (
-	NotStarted GameState = iota
-	WaitingForTurn
-	YourTurn
-	Finished
+	NotStarted     GameState = "not-started"
+	WaitingForTurn GameState = "waiting-for-turn"
+	YourTurn       GameState = "your-turn"
+	Finished       GameState = "finished"
 )
 
 var Colors = [...]Color{Red, Yellow, Green, Blue, White}
@@ -91,7 +92,7 @@ type Turn struct {
 	NewCard Card `json:"new_card"`
 }
 
-type InfoResponse struct {
+type GameStateSummary struct {
 	State      GameState         `json:"state"`
 	Players    []string          `json:"players"`
 	Hand       []HiddenCard      `json:"hand"`        // the focused player's hand
@@ -101,30 +102,6 @@ type InfoResponse struct {
 	Turns      []Turn            `json:"turns"`
 	TurnCursor int               `json:"turn_cursor"`
 }
-
-type InfoRequest struct {
-	Player     string
-	TurnCursor int
-	Resp       chan InfoResponse
-}
-
-type MoveRequest struct {
-	Move   Move
-	Player string
-	Resp   chan MoveResponse
-}
-
-type MoveResponse struct {
-	Response MoveResponseType
-	Info     InfoResponse
-	// Maybe we want more info, like if a bomb went off
-}
-type MoveResponseType int
-
-const (
-	Ok MoveResponseType = iota
-	NotYourTurn
-)
 
 // 64-bit hex
 type SessionToken string
@@ -157,42 +134,42 @@ type Game struct {
 	whoseTurn int // Index into players. Use -1 when game is over
 }
 
-func (g *Game) move(move Move, player string) MoveResponse {
-	lastTurn := len(g.turns)
-	if player != g.players[g.whoseTurn] {
-		return MoveResponse{NotYourTurn, g.InfoResponse(player, lastTurn)}
-	}
-	//type Move struct {
-	//Type MoveType `json:"type"`
-	//// for Hint:
-	//ToPlayer string `json:"to_player"`
-	//Color    Color  `json:"color"`
-	//Number   int    `json:"number"`
-	//CardIds  []int  `json:"card_ids"`
-	//for Play/Discard:
-	//CardId int `json:"card_id"`
+// func (g *Game) move(move Move, player string) (GetStateResponse, error) {
+// 	lastTurn := len(g.turns)
+// 	if player != g.players[g.whoseTurn] {
+// 		return MoveResponse{NotYourTurn, g.InfoResponse(player, lastTurn)}
+// 	}
+// 	//type Move struct {
+// 	//Type MoveType `json:"type"`
+// 	//// for Hint:
+// 	//ToPlayer string `json:"to_player"`
+// 	//Color    Color  `json:"color"`
+// 	//Number   int    `json:"number"`
+// 	//CardIds  []int  `json:"card_ids"`
+// 	//for Play/Discard:
+// 	//CardId int `json:"card_id"`
 
-	//type Turn struct {
-	//Id     int    `json:"id"`
-	//Player string `json:"player"`
-	//Move   Move   `json:"move"`
-	// no NewCard for Hint move
-	//NewCard Card `json:"new_card"`
-	var turn Turn
-	turn.Id = g.turns[len(g.turns)-1].Id + 1
-	turn.Player = player
-	switch move.Type {
-	case Hint:
-		// TODO Make sure the hint is legal
-		//for _, card := range g.hands[move.ToPlayer] {
-		//}
-	case Play:
-		// TODO Bomb or edit board
-	case Discard:
-		// TODO Add to Discard
-	}
-	return MoveResponse{Ok, g.InfoResponse(player, lastTurn)}
-}
+// 	//type Turn struct {
+// 	//Id     int    `json:"id"`
+// 	//Player string `json:"player"`
+// 	//Move   Move   `json:"move"`
+// 	// no NewCard for Hint move
+// 	//NewCard Card `json:"new_card"`
+// 	var turn Turn
+// 	turn.Id = g.turns[len(g.turns)-1].Id + 1
+// 	turn.Player = player
+// 	switch move.Type {
+// 	case Hint:
+// 		// TODO Make sure the hint is legal
+// 		//for _, card := range g.hands[move.ToPlayer] {
+// 		//}
+// 	case Play:
+// 		// TODO Bomb or edit board
+// 	case Discard:
+// 		// TODO Add to Discard
+// 	}
+// 	return MoveResponse{Ok, g.InfoResponse(player, lastTurn)}
+// }
 
 func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err error) {
 	g.Lock()
@@ -215,15 +192,22 @@ func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err er
 	return session, nil
 }
 
-func (g *Game) LockingGetState(playerName string, session SessionToken, wait bool) error {
-	err := g.checkPlayerSession(playerName, session)
+func (g *Game) LockingGetState(playerName string, session SessionToken, wait bool) (res GameStateSummary, err error) {
+	err = g.checkPlayerSession(playerName, session)
 	if err != nil {
-		return err
+		return res, err
 	}
-	if wait {
-		return fmt.Errorf("'wait' not yet implemented")
+	for {
+		res, err = g.getStateSummary(playerName, 0)
+		if err != nil {
+			return res, err
+		}
+		if !wait || res.State == YourTurn {
+			return res, err
+		}
+		// TODO use a channel to make this faster
+		<-time.NewTimer(time.Millisecond * 500).C
 	}
-	return fmt.Errorf("TODO: LockingGetState")
 }
 
 // uses the game lock
@@ -256,8 +240,8 @@ func (g *Game) hasPlayer(playerName string) bool {
 	return false
 }
 
-func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {
-	var resp InfoResponse
+func (g *Game) getStateSummary(player string, turnCursor int) (GameStateSummary, error) {
+	var resp GameStateSummary
 	// fill these no matter what
 	resp.Players = g.players
 	resp.Board = g.board
@@ -268,7 +252,7 @@ func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {
 	if len(g.players) < g.NumPlayers {
 		// Game has not started yet
 		resp.State = NotStarted
-		return resp
+		return resp, nil
 	} else if g.whoseTurn == -1 {
 		resp.State = Finished
 	} else if g.players[g.whoseTurn] == player {
@@ -278,17 +262,28 @@ func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {
 	}
 	resp.Turns = g.turns[turnCursor:]
 	resp.TurnCursor = len(g.turns)
-	return resp
+	return resp, nil
 }
 
 // The hand of a player, as hidden cards
-func (g *Game) hiddenPlayerHand(player string) []HiddenCard {
-	panic("todo")
+func (g *Game) hiddenPlayerHand(player string) (res []HiddenCard) {
+	hand := g.hands[player]
+	for _, card := range hand {
+		res = append(res, card.Hide())
+	}
+	return res
 }
 
 // The hands of the players _except_ the specified player.
 func (g *Game) otherHands(exceptPlayer string) map[string][]Card {
-	panic("todo")
+	res := make(map[string][]Card)
+	for p2, hand := range g.hands {
+		if p2 == exceptPlayer {
+			continue
+		}
+		res[p2] = hand
+	}
+	return res
 }
 
 // // Take hands and hide the hand of the player.
