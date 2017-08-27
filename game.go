@@ -155,10 +155,14 @@ func (g *Game) DoGame() {
 		select {
 		case r := <-g.RequestInfo:
 			r.Resp <- g.InfoResponse(r.Player, r.TurnCursor)
-		case t := g.DoTurn:
-			g.DoTurn(t)
+		case t := <-g.DoTurn:
+			g.doTurn(t)
 		}
 	}
+}
+
+func (g *Game) doTurn(turn Turn) {
+	return
 }
 
 func (g *Game) InfoResponse(player string, turnCursor int) InfoResponse {
