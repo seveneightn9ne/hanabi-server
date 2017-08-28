@@ -23,7 +23,7 @@ func NewGetStateResponseError(reason string) *GetStateResponse {
 func GetState(state *ServerState, req_ interface{}) interface{} {
 	req, ok := req_.(*GetStateRequest)
 	if !ok {
-		return NewGetStateResponseError("cannot interpret the request as a StartGameRequest")
+		return NewGetStateResponseError("cannot interpret the request as a GetStateRequest")
 	}
 	game := state.lookupGame(req.GameName)
 	if game == nil {

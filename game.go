@@ -134,43 +134,6 @@ type Game struct {
 	whoseTurn int // Index into players. Use -1 when game is over
 }
 
-// func (g *Game) move(move Move, player string) (GetStateResponse, error) {
-// 	lastTurn := len(g.turns)
-// 	if player != g.players[g.whoseTurn] {
-// 		return MoveResponse{NotYourTurn, g.InfoResponse(player, lastTurn)}
-// 	}
-// 	//type Move struct {
-// 	//Type MoveType `json:"type"`
-// 	//// for Hint:
-// 	//ToPlayer string `json:"to_player"`
-// 	//Color    Color  `json:"color"`
-// 	//Number   int    `json:"number"`
-// 	//CardIds  []int  `json:"card_ids"`
-// 	//for Play/Discard:
-// 	//CardId int `json:"card_id"`
-
-// 	//type Turn struct {
-// 	//Id     int    `json:"id"`
-// 	//Player string `json:"player"`
-// 	//Move   Move   `json:"move"`
-// 	// no NewCard for Hint move
-// 	//NewCard Card `json:"new_card"`
-// 	var turn Turn
-// 	turn.Id = g.turns[len(g.turns)-1].Id + 1
-// 	turn.Player = player
-// 	switch move.Type {
-// 	case Hint:
-// 		// TODO Make sure the hint is legal
-// 		//for _, card := range g.hands[move.ToPlayer] {
-// 		//}
-// 	case Play:
-// 		// TODO Bomb or edit board
-// 	case Discard:
-// 		// TODO Add to Discard
-// 	}
-// 	return MoveResponse{Ok, g.InfoResponse(player, lastTurn)}
-// }
-
 func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err error) {
 	g.Lock()
 	defer g.Unlock()
@@ -193,7 +156,7 @@ func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err er
 }
 
 func (g *Game) LockingGetState(playerName string, session SessionToken, wait bool) (res GameStateSummary, err error) {
-	err = g.checkPlayerSession(playerName, session)
+	err = g.lockingCheckPlayerSession(playerName, session)
 	if err != nil {
 		return res, err
 	}
@@ -211,9 +174,13 @@ func (g *Game) LockingGetState(playerName string, session SessionToken, wait boo
 }
 
 // uses the game lock
-func (g *Game) checkPlayerSession(playerName string, session SessionToken) error {
+func (g *Game) lockingCheckPlayerSession(playerName string, session SessionToken) error {
 	g.Lock()
 	defer g.Unlock()
+	return g.checkPlayerSession(playerName, session)
+}
+
+func (g *Game) checkPlayerSession(playerName string, session SessionToken) error {
 	if !g.hasPlayer(playerName) {
 		return fmt.Errorf("no player '%v'", playerName)
 	}
@@ -308,3 +275,58 @@ func (g *Game) otherHands(exceptPlayer string) map[string][]Card {
 // 		}
 // 	}
 // }
+
+func (g *Game) LockingMove(player string, session SessionToken, move Move) (res GameStateSummary, err error) {
+	g.Lock()
+	defer g.Unlock()
+
+	err = g.checkPlayerSession(playerName, session)
+	if err != nil {
+		return res, err
+	}
+
+	err := g.move(player, move)
+	// TODO THE MOVE MOVE MOE
+
+	res, err = g.getStateSummary(playerName, 0)
+	if err != nil {
+		return res, err
+	}
+}
+
+func (g *Game) move(player string, move Move) (GetStateResponse, error) {
+	lastTurn := len(g.turns)
+	if player != g.players[g.whoseTurn] {
+		return fmt.Errorf("not your turn")
+	}
+	//type Move struct {
+	//Type MoveType `json:"type"`
+	//// for Hint:
+	//ToPlayer string `json:"to_player"`
+	//Color    Color  `json:"color"`
+	//Number   int    `json:"number"`
+	//CardIds  []int  `json:"card_ids"`
+	//for Play/Discard:
+	//CardId int `json:"card_id"`
+
+	//type Turn struct {
+	//Id     int    `json:"id"`
+	//Player string `json:"player"`
+	//Move   Move   `json:"move"`
+	// no NewCard for Hint move
+	//NewCard Card `json:"new_card"`
+	var turn Turn
+	turn.Id = g.turns[len(g.turns)-1].Id + 1
+	turn.Player = player
+	switch move.Type {
+	case Hint:
+		// TODO Make sure the hint is legal
+		//for _, card := range g.hands[move.ToPlayer] {
+		//}
+	case Play:
+		// TODO Bomb or edit board
+	case Discard:
+		// TODO Add to Discard
+	}
+	return MoveResponse{Ok, g.InfoResponse(player, lastTurn)}
+}
