@@ -2,10 +2,10 @@ package main
 
 import "testing"
 
-func serverStateWithGame() (ServerState, Game) {
+func serverStateWithGame() (ServerState, *Game) {
 	s := NewServer().state
 	StartGame(&s, &StartGameRequest{2, "test_game"})
-	return s, *s.Games["test_game"]
+	return s, s.Games["test_game"]
 }
 
 func TestJoinGame_Basic(t *testing.T) {
@@ -30,6 +30,7 @@ func TestJoinGame_Basic(t *testing.T) {
 		t.Errorf("The game should have 2 players but has %v", len(game.players))
 	}
 	request.PlayerName = "player3"
+	response = JoinGame(&serverState, &request).(*JoinGameResponse)
 	if response.Status == "ok" {
 		t.Errorf("expected to error when adding an extra player")
 	}
