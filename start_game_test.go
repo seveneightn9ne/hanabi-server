@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-func TestBasic(t *testing.T) {
+func TestStartGame_Basic(t *testing.T) {
 	serverState := NewServer().state
 	request := StartGameRequest{2, "test_game"}
 	response := StartGame(&serverState, &request).(*StartGameResponse)
@@ -31,7 +31,7 @@ func TestBasic(t *testing.T) {
 	}
 }
 
-func TestWrongTypeRequest(t *testing.T) {
+func TestStartGame_WrongTypeRequest(t *testing.T) {
 	serverState := NewServer().state
 	request := JoinGameRequest{"test_game", "test_player"}
 	response := StartGame(&serverState, &request).(*StartGameResponse)
@@ -43,7 +43,7 @@ func TestWrongTypeRequest(t *testing.T) {
 	}
 }
 
-func TestBadParams(t *testing.T) {
+func TestStartGame_BadParams(t *testing.T) {
 	serverState := NewServer().state
 	request := StartGameRequest{0, "test_game"}
 	response := StartGame(&serverState, &request).(*StartGameResponse)
