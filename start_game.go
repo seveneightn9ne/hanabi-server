@@ -33,13 +33,13 @@ func StartGame(state *ServerState, req_ interface{}) interface{} {
 	}
 	deck, cardsById := newDeck()
 	newGame := &Game{
-		Name:       req.Name,
-		players:    nil,
-		sessions:   make(map[string]SessionToken),
-		NumPlayers: req.NumPlayers,
-		turns:      make([]Turn, 0),
-		deck:       deck,
-		hands:      make(map[string][]Card, req.NumPlayers),
+		Name:        req.Name,
+		players:     nil,
+		playerNames: make(map[SessionToken]string),
+		NumPlayers:  req.NumPlayers,
+		turns:       make([]Turn, 0),
+		deck:        deck,
+		hands:       make(map[SessionToken][]Card, req.NumPlayers),
 		board: map[Color]int{
 			White:  0,
 			Blue:   0,

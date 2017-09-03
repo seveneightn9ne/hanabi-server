@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"sync"
@@ -124,14 +123,14 @@ type Game struct {
 	cardsById  map[int]Card
 
 	// Mutable, private fields
-	players   []string
-	sessions  map[string]SessionToken // player -> session token
-	turns     []Turn
-	deck      Deck
-	hands     map[string][]Card
-	board     map[Color]int
-	discard   []Card
-	whoseTurn int // Index into players. Use -1 when game is over
+	players     []SessionToken
+	playerNames map[SessionToken]string
+	turns       []Turn
+	deck        Deck
+	hands       map[SessionToken][]Card
+	board       map[Color]int
+	discard     []Card
+	whoseTurn   int // Index into players. Use -1 when game is over
 }
 
 // func (g *Game) move(move Move, player string) (GetStateResponse, error) {
@@ -178,7 +177,7 @@ func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err er
 	if len(g.players) >= g.NumPlayers {
 		return session, fmt.Errorf("the game is full (%v/%v players)", len(g.players), g.NumPlayers)
 	}
-	for _, p := range g.players {
+	for _, p := range g.playerNames {
 		if p == playerName {
 			return session, fmt.Errorf("player with that name is already in the game")
 		}
@@ -187,18 +186,20 @@ func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err er
 	if err != nil {
 		return session, fmt.Errorf("error generating session token")
 	}
-	g.players = append(g.players, playerName)
-	g.sessions[playerName] = session
+	g.players = append(g.players, session)
+	g.playerNames[session] = playerName
+
+	// Deal cards to player
+	hand := g.deck[:5]
+	g.deck = g.deck[5:]
+	g.hands[session] = hand
+
 	return session, nil
 }
 
-func (g *Game) LockingGetState(playerName string, session SessionToken, wait bool) (res GameStateSummary, err error) {
-	err = g.checkPlayerSession(playerName, session)
-	if err != nil {
-		return res, err
-	}
+func (g *Game) LockingGetState(session SessionToken, wait bool) (res GameStateSummary, err error) {
 	for {
-		res, err = g.lockingGetStateSummary(playerName, 0)
+		res, err = g.lockingGetStateSummary(session, 0)
 		if err != nil {
 			return res, err
 		}
@@ -210,29 +211,8 @@ func (g *Game) LockingGetState(playerName string, session SessionToken, wait boo
 	}
 }
 
-// uses the game lock
-func (g *Game) checkPlayerSession(playerName string, session SessionToken) error {
-	g.Lock()
-	defer g.Unlock()
-	if !g.hasPlayer(playerName) {
-		return fmt.Errorf("no player '%v'", playerName)
-	}
-	s2, ok := g.sessions[playerName]
-	if !ok {
-		// this should never happen
-		return fmt.Errorf("missing session for '%v'", playerName)
-	}
-	if session == "" {
-		return fmt.Errorf("session is required")
-	}
-	if subtle.ConstantTimeCompare([]byte(s2), []byte(session)) != 1 {
-		return fmt.Errorf("invalid session for '%v'", playerName)
-	}
-	return nil
-}
-
 func (g *Game) hasPlayer(playerName string) bool {
-	for _, p2 := range g.players {
+	for _, p2 := range g.playerNames {
 		if playerName == p2 {
 			return true
 		}
@@ -240,20 +220,23 @@ func (g *Game) hasPlayer(playerName string) bool {
 	return false
 }
 
-func (g *Game) lockingGetStateSummary(player string, turnCursor int) (GameStateSummary, error) {
+func (g *Game) lockingGetStateSummary(session SessionToken, turnCursor int) (GameStateSummary, error) {
 	g.Lock()
 	defer g.Unlock()
-	return g.getStateSummary(player, turnCursor)
+	return g.getStateSummary(session, turnCursor)
 }
 
-func (g *Game) getStateSummary(player string, turnCursor int) (GameStateSummary, error) {
+func (g *Game) getStateSummary(session SessionToken, turnCursor int) (GameStateSummary, error) {
 	var resp GameStateSummary
 	// fill these no matter what
-	resp.Players = g.players
+	resp.Players = nil
+	for _, s := range g.players {
+		resp.Players = append(resp.Players, g.playerNames[s])
+	}
 	resp.Board = g.board
 	resp.Discard = g.discard
-	resp.Hand = g.hiddenPlayerHand(player)
-	resp.OtherHands = g.otherHands(player)
+	resp.Hand = g.hiddenPlayerHand(session)
+	resp.OtherHands = g.otherHands(session)
 
 	if len(g.players) < g.NumPlayers {
 		// Game has not started yet
@@ -261,7 +244,7 @@ func (g *Game) getStateSummary(player string, turnCursor int) (GameStateSummary,
 		return resp, nil
 	} else if g.whoseTurn == -1 {
 		resp.State = Finished
-	} else if g.players[g.whoseTurn] == player {
+	} else if g.players[g.whoseTurn] == session {
 		resp.State = YourTurn
 	} else {
 		resp.State = WaitingForTurn
@@ -272,7 +255,7 @@ func (g *Game) getStateSummary(player string, turnCursor int) (GameStateSummary,
 }
 
 // The hand of a player, as hidden cards
-func (g *Game) hiddenPlayerHand(player string) (res []HiddenCard) {
+func (g *Game) hiddenPlayerHand(player SessionToken) (res []HiddenCard) {
 	hand := g.hands[player]
 	for _, card := range hand {
 		res = append(res, card.Hide())
@@ -281,13 +264,13 @@ func (g *Game) hiddenPlayerHand(player string) (res []HiddenCard) {
 }
 
 // The hands of the players _except_ the specified player.
-func (g *Game) otherHands(exceptPlayer string) map[string][]Card {
+func (g *Game) otherHands(exceptPlayer SessionToken) map[string][]Card {
 	res := make(map[string][]Card)
 	for p2, hand := range g.hands {
 		if p2 == exceptPlayer {
 			continue
 		}
-		res[p2] = hand
+		res[g.playerNames[p2]] = hand
 	}
 	return res
 }

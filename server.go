@@ -36,7 +36,8 @@ type Server struct {
 
 type ServerState struct {
 	Games        map[string]*Game
-	GamesMapLock sync.Mutex // Lock that guards the mapping, not the Games.
+	Sessions     map[SessionToken]*Game
+	GamesMapLock sync.Mutex // Lock that guards the mappings, not the Games.
 }
 
 // Get a game. Acquires GamesMapLock. Can return nil.
@@ -47,10 +48,24 @@ func (s *ServerState) lookupGame(name string) *Game {
 	return game
 }
 
+func (s *ServerState) gameForSession(session SessionToken) *Game {
+	s.GamesMapLock.Lock()
+	defer s.GamesMapLock.Unlock()
+	game, _ := s.Sessions[session]
+	return game
+}
+
+func (s *ServerState) addSession(session SessionToken, game *Game) {
+	s.GamesMapLock.Lock()
+	defer s.GamesMapLock.Unlock()
+	s.Sessions[session] = game
+}
+
 func NewServer() *Server {
 	return &Server{
 		state: ServerState{
-			Games: make(map[string]*Game),
+			Games:    make(map[string]*Game),
+			Sessions: make(map[SessionToken]*Game),
 		},
 	}
 }

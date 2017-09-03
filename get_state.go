@@ -1,15 +1,13 @@
 package main
 
 type GetStateRequest struct {
-	GameName   string       `json:"game_name"`
-	PlayerName string       `json:"player_name"`
-	Session    SessionToken `json:"session"`
-	Wait       bool         `json:"wait"`
+	Session SessionToken `json:"session"`
+	Wait    bool         `json:"wait"`
 }
 
 type GetStateResponse struct {
 	Status string           `json:"status"`
-	Reason string           `json:"reason"`
+	Reason string           `json:"reason,omitempty"`
 	State  GameStateSummary `json:"state,omitempty"`
 }
 
@@ -25,12 +23,12 @@ func GetState(state *ServerState, req_ interface{}) interface{} {
 	if !ok {
 		return NewGetStateResponseError("cannot interpret the request as a StartGameRequest")
 	}
-	game := state.lookupGame(req.GameName)
+	game := state.gameForSession(req.Session)
 	if game == nil {
-		return NewGetStateResponseError("no game found with that name")
+		return NewGetStateResponseError("Session token not found")
 	}
 
-	gameState, err := game.LockingGetState(req.PlayerName, req.Session, req.Wait)
+	gameState, err := game.LockingGetState(req.Session, req.Wait)
 	if err != nil {
 		return NewGetStateResponseError(err.Error())
 	}

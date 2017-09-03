@@ -37,6 +37,7 @@ func JoinGame(state *ServerState, req_ interface{}) interface{} {
 	if err != nil {
 		return NewJoinGameResponseError(err.Error())
 	}
+	state.addSession(session, game)
 	return &JoinGameResponse{
 		Status:  "ok",
 		Session: session,
