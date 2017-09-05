@@ -32,37 +32,29 @@ func GetState(state *ServerState, req_ interface{}) interface{} {
 		return NewGetStateResponseError("Session token not found")
 	}
 
-	gameState, err := game.lockingGetState(req.Session, req.Wait)
-	if err != nil {
-		return NewGetStateResponseError(err.Error())
-	}
+	gameState := getStateLoop(game, req.Session, req.Wait)
 	return &GetStateResponse{
 		Status: "ok",
 		State:  gameState,
 	}
 }
 
-func (g *Game) lockingGetState(session SessionToken, wait bool) (res GameStateSummary, err error) {
+func getStateLoop(g *Game, session SessionToken, wait bool) GameStateSummary {
 	for {
-		res, err = g.lockingGetStateSummary(session, 0)
-		if err != nil {
-			return res, err
-		}
+		res := g.getState(session, 0)
+
 		if !wait || res.State == YourTurn {
-			return res, err
+			return res
 		}
 		// TODO use a channel to make this faster
 		<-time.NewTimer(time.Millisecond * 500).C
 	}
 }
 
-func (g *Game) lockingGetStateSummary(session SessionToken, turnCursor int) (GameStateSummary, error) {
+func (g *Game) getState(session SessionToken, turnCursor int) GameStateSummary {
 	g.Lock()
 	defer g.Unlock()
-	return g.getStateSummary(session, turnCursor)
-}
 
-func (g *Game) getStateSummary(session SessionToken, turnCursor int) (GameStateSummary, error) {
 	var resp GameStateSummary
 	// fill these no matter what
 	resp.Players = nil
@@ -77,7 +69,7 @@ func (g *Game) getStateSummary(session SessionToken, turnCursor int) (GameStateS
 	if len(g.players) < g.NumPlayers {
 		// Game has not started yet
 		resp.State = NotStarted
-		return resp, nil
+		return resp
 	} else if g.whoseTurn == -1 {
 		resp.State = Finished
 	} else if g.players[g.whoseTurn] == session {
@@ -87,7 +79,7 @@ func (g *Game) getStateSummary(session SessionToken, turnCursor int) (GameStateS
 	}
 	resp.Turns = g.turns[turnCursor:]
 	resp.TurnCursor = len(g.turns)
-	return resp, nil
+	return resp
 }
 
 // The hands of the players _except_ the specified player.
