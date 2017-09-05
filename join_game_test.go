@@ -37,6 +37,26 @@ func TestJoinGame_Basic(t *testing.T) {
 
 }
 
+func TestJoinGame_NumCards(t *testing.T) {
+
+	testNumCards := func(numPlayers int, numCards int) {
+		s := NewServer().state
+		StartGame(&s, &StartGameRequest{numPlayers, "test_game"})
+		request := JoinGameRequest{"test_game", "player1"}
+		response := JoinGame(&s, &request).(*JoinGameResponse)
+		session := response.Session
+		if hand := s.Games["test_game"].hands[session]; len(hand) != numCards {
+			t.Errorf("expected %v cards for a %v-player game but found %v",
+				numCards, numPlayers, len(hand))
+		}
+	}
+
+	testNumCards(2, 5)
+	testNumCards(3, 5)
+	testNumCards(4, 4)
+	testNumCards(5, 4)
+}
+
 func TestJoinGame_WrongTypeRequest(t *testing.T) {
 	serverState, game := serverStateWithGame()
 	request := StartGameRequest{2, "test_game"}

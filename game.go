@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/hex"
-	"fmt"
 	"sync"
-	"time"
 )
 
 type MoveType string
@@ -133,6 +131,13 @@ type Game struct {
 	whoseTurn   int // Index into players. Use -1 when game is over
 }
 
+func (g *Game) cardsInHand() int {
+	if g.NumPlayers <= 3 {
+		return 5
+	}
+	return 4
+}
+
 // func (g *Game) move(move Move, player string) (GetStateResponse, error) {
 // 	lastTurn := len(g.turns)
 // 	if player != g.players[g.whoseTurn] {
@@ -168,126 +173,4 @@ type Game struct {
 // 		// TODO Add to Discard
 // 	}
 // 	return MoveResponse{Ok, g.InfoResponse(player, lastTurn)}
-// }
-
-func (g *Game) LockingAddPlayer(playerName string) (session SessionToken, err error) {
-	g.Lock()
-	defer g.Unlock()
-
-	if len(g.players) >= g.NumPlayers {
-		return session, fmt.Errorf("the game is full (%v/%v players)", len(g.players), g.NumPlayers)
-	}
-	for _, p := range g.playerNames {
-		if p == playerName {
-			return session, fmt.Errorf("player with that name is already in the game")
-		}
-	}
-	session, err = RandomSessionToken()
-	if err != nil {
-		return session, fmt.Errorf("error generating session token")
-	}
-	g.players = append(g.players, session)
-	g.playerNames[session] = playerName
-
-	// Deal cards to player
-	hand := g.deck[:5]
-	g.deck = g.deck[5:]
-	g.hands[session] = hand
-
-	return session, nil
-}
-
-func (g *Game) LockingGetState(session SessionToken, wait bool) (res GameStateSummary, err error) {
-	for {
-		res, err = g.lockingGetStateSummary(session, 0)
-		if err != nil {
-			return res, err
-		}
-		if !wait || res.State == YourTurn {
-			return res, err
-		}
-		// TODO use a channel to make this faster
-		<-time.NewTimer(time.Millisecond * 500).C
-	}
-}
-
-func (g *Game) hasPlayer(playerName string) bool {
-	for _, p2 := range g.playerNames {
-		if playerName == p2 {
-			return true
-		}
-	}
-	return false
-}
-
-func (g *Game) lockingGetStateSummary(session SessionToken, turnCursor int) (GameStateSummary, error) {
-	g.Lock()
-	defer g.Unlock()
-	return g.getStateSummary(session, turnCursor)
-}
-
-func (g *Game) getStateSummary(session SessionToken, turnCursor int) (GameStateSummary, error) {
-	var resp GameStateSummary
-	// fill these no matter what
-	resp.Players = nil
-	for _, s := range g.players {
-		resp.Players = append(resp.Players, g.playerNames[s])
-	}
-	resp.Board = g.board
-	resp.Discard = g.discard
-	resp.Hand = g.hiddenPlayerHand(session)
-	resp.OtherHands = g.otherHands(session)
-
-	if len(g.players) < g.NumPlayers {
-		// Game has not started yet
-		resp.State = NotStarted
-		return resp, nil
-	} else if g.whoseTurn == -1 {
-		resp.State = Finished
-	} else if g.players[g.whoseTurn] == session {
-		resp.State = YourTurn
-	} else {
-		resp.State = WaitingForTurn
-	}
-	resp.Turns = g.turns[turnCursor:]
-	resp.TurnCursor = len(g.turns)
-	return resp, nil
-}
-
-// The hand of a player, as hidden cards
-func (g *Game) hiddenPlayerHand(player SessionToken) (res []HiddenCard) {
-	hand := g.hands[player]
-	for _, card := range hand {
-		res = append(res, card.Hide())
-	}
-	return res
-}
-
-// The hands of the players _except_ the specified player.
-func (g *Game) otherHands(exceptPlayer SessionToken) map[string][]Card {
-	res := make(map[string][]Card)
-	for p2, hand := range g.hands {
-		if p2 == exceptPlayer {
-			continue
-		}
-		res[g.playerNames[p2]] = hand
-	}
-	return res
-}
-
-// // Take hands and hide the hand of the player.
-// func hideCards(hands hands, player string) map[string][]Card {
-// 	ret := make(map[string][]Card)
-// 	for p, hand := range hands {
-// 		if p == player {
-// 			// Hide the cards for the player.
-// 			ret[p] = nil
-// 			for _, card := range hand {
-// 				ret[p] = append(ret[p], card.Hide())
-// 			}
-// 		} else {
-// 			// Pass through the other hands unmodified.
-// 			ret[p] = hand
-// 		}
-// 	}
 // }
