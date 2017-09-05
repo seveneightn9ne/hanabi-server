@@ -50,7 +50,7 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 		return err
 	}
 	if g.whoseTurn != playerIndex {
-		return fmt.Errorf("not player %v's turn", playerIndex)
+		return fmt.Errorf("not your turn it's player %v's turn", g.whoseTurn)
 	}
 
 	switch move.Type {
@@ -116,6 +116,7 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 		// commit
 		g.hints--
 		g.turns = append(g.turns, turn)
+		g.nextTurn()
 		return nil
 	default:
 		return fmt.Errorf("unrecognized move type: %v", move.Type)
@@ -140,7 +141,7 @@ func (g *Game) playerInfo(session SessionToken) (name string, index int, err err
 	if len(name) == 0 {
 		return name, index, fmt.Errorf("fault: empty player name")
 	}
-	return name, index, fmt.Errorf("session not in game")
+	return name, index, nil
 }
 
 func (g *Game) lookupPlayerByName(name string) (s SessionToken, err error) {

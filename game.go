@@ -163,3 +163,10 @@ func (g *Game) getCardFromHand(cardID int, player SessionToken) *Card {
 	}
 	return nil
 }
+
+func (g *Game) nextTurn() {
+	g.whoseTurn++
+	if g.whoseTurn >= len(g.players) {
+		g.whoseTurn = 0
+	}
+}
