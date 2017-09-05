@@ -40,12 +40,12 @@ func StartGame(state *ServerState, req_ interface{}) interface{} {
 		turns:       make([]Turn, 0),
 		deck:        deck,
 		hands:       make(map[SessionToken][]Card, req.NumPlayers),
-		board: map[Color]int{
-			White:  0,
-			Blue:   0,
-			Red:    0,
-			Green:  0,
-			Yellow: 0},
+		board: map[Color][]Card{
+			White:  nil,
+			Blue:   nil,
+			Red:    nil,
+			Green:  nil,
+			Yellow: nil},
 		bombs:     3,
 		hints:     8,
 		discard:   make([]Card, 0),

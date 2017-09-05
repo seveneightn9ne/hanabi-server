@@ -29,8 +29,8 @@ func TestGetState_NotStarted(t *testing.T) {
 		t.Errorf("expected the board length is 5 but is %v", l)
 	}
 	for k, v := range response.State.Board {
-		if v != 0 {
-			t.Errorf("Expected all piles to be 0 but pile %v was %v", k, v)
+		if v != nil {
+			t.Errorf("Expected all piles to be empty but pile %v was %v", k, v)
 		}
 	}
 	if l := len(response.State.Hand); l != 5 {

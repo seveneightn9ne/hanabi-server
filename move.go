@@ -52,6 +52,35 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 
 	switch move.Type {
 	case Play:
+		card := g.getCardFromHand(move.CardId, session)
+		if card == nil {
+			return fmt.Errorf("Card #%v is not in your hand", move.CardId)
+		}
+		pile := g.board[card.Color]
+		topCard := pile[len(pile)-1]
+		if topCard.Number+1 == card.Number {
+			// Hooray, well done!
+			if card.Number == 5 && g.hints < 8 {
+				// Grant a hint
+				g.hints += 1
+			}
+			g.board[card.Color] = append(pile, *card)
+		} else {
+			// Oof, wrong card
+			if g.bombs == 1 {
+				// Last chance -- game over
+				// TODO(jessk) -- GAME OVER
+			}
+
+			g.bombs -= 1
+
+			// Card goes in discard pile
+			g.discard = append(g.discard, *card)
+		}
+		// You get a new card!
+		newCard := g.DrawCard()
+		g.hands[session] = append(g.hands[session], *newCard)
+
 		return fmt.Errorf("TO BE ACCOMPLISHED")
 	case Discard:
 		return fmt.Errorf("TO BE ACCOMPLISHED")

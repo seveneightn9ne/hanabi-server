@@ -81,6 +81,17 @@ type Cardy interface {
 	GetId() int
 }
 type Deck []Card
+
+func (g *Game) DrawCard() *Card {
+	l := len(g.deck)
+	if l == 0 {
+		return nil
+	}
+	c := g.deck[l-1]
+	g.deck = g.deck[l-2:]
+	return &c
+}
+
 type Turn struct {
 	Id     int    `json:"id"`     // turn number starting at 0
 	Player string `json:"player"` // player that made the move
@@ -94,7 +105,7 @@ type GameStateSummary struct {
 	Players    []string          `json:"players"`
 	Hand       []HiddenCard      `json:"hand"`        // the focused player's hand
 	OtherHands map[string][]Card `json:"other_hands"` // the other player's hands
-	Board      map[Color]int     `json:"board"`
+	Board      map[Color][]Card  `json:"board"`
 	Discard    []Card            `json:"discard"`
 	Turns      []Turn            `json:"turns"`
 	TurnCursor int               `json:"turn_cursor"`
@@ -126,7 +137,7 @@ type Game struct {
 	turns       []Turn
 	deck        Deck
 	hands       map[SessionToken][]Card
-	board       map[Color]int
+	board       map[Color][]Card
 	bombs       int
 	hints       int
 	discard     []Card
@@ -140,39 +151,15 @@ func (g *Game) cardsInHand() int {
 	return 4
 }
 
-// func (g *Game) move(move Move, player string) (GetStateResponse, error) {
-// 	lastTurn := len(g.turns)
-// 	if player != g.players[g.whoseTurn] {
-// 		return MoveResponse{NotYourTurn, g.InfoResponse(player, lastTurn)}
-// 	}
-// 	//type Move struct {
-// 	//Type MoveType `json:"type"`
-// 	//// for Hint:
-// 	//ToPlayer string `json:"to_player"`
-// 	//Color    Color  `json:"color"`
-// 	//Number   int    `json:"number"`
-// 	//CardIds  []int  `json:"card_ids"`
-// 	//for Play/Discard:
-// 	//CardId int `json:"card_id"`
-
-// 	//type Turn struct {
-// 	//Id     int    `json:"id"`
-// 	//Player string `json:"player"`
-// 	//Move   Move   `json:"move"`
-// 	// no NewCard for Hint move
-// 	//NewCard Card `json:"new_card"`
-// 	var turn Turn
-// 	turn.Id = g.turns[len(g.turns)-1].Id + 1
-// 	turn.Player = player
-// 	switch move.Type {
-// 	case Hint:
-// 		// TODO Make sure the hint is legal
-// 		//for _, card := range g.hands[move.ToPlayer] {
-// 		//}
-// 	case Play:
-// 		// TODO Bomb or edit board
-// 	case Discard:
-// 		// TODO Add to Discard
-// 	}
-// 	return MoveResponse{Ok, g.InfoResponse(player, lastTurn)}
-// }
+// Removes the card from the hand!
+// Requires game is locked!
+func (g *Game) getCardFromHand(cardId int, player SessionToken) *Card {
+	hand := g.hands[player]
+	for i, card := range hand {
+		if card.Id == cardId {
+			g.hands[player] = append(hand[:i], hand[i+1:]...)
+			return &card
+		}
+	}
+	return nil
+}
