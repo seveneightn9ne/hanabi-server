@@ -46,6 +46,8 @@ func StartGame(state *ServerState, req_ interface{}) interface{} {
 			Red:    0,
 			Green:  0,
 			Yellow: 0},
+		bombs:     3,
+		hints:     8,
 		discard:   make([]Card, 0),
 		cardsById: cardsById,
 		whoseTurn: 0,

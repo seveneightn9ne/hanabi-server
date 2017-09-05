@@ -127,6 +127,8 @@ type Game struct {
 	deck        Deck
 	hands       map[SessionToken][]Card
 	board       map[Color]int
+	bombs       int
+	hints       int
 	discard     []Card
 	whoseTurn   int // Index into players. Use -1 when game is over
 }

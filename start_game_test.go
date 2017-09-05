@@ -29,6 +29,12 @@ func TestStartGame_Basic(t *testing.T) {
 	if game.whoseTurn != 0 {
 		t.Errorf("The turn should start at 0 but is %v", game.whoseTurn)
 	}
+	if game.bombs != 3 {
+		t.Errorf("There should be 3 bombs but there are %v", game.bombs)
+	}
+	if game.hints != 8 {
+		t.Errorf("There should be 8 hints to start with but there are %v", game.hints)
+	}
 }
 
 func TestStartGame_WrongTypeRequest(t *testing.T) {
