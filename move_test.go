@@ -55,6 +55,17 @@ func TestMove_Hint(t *testing.T) {
 	require.Error(t, err, "not your turn")
 }
 
+func TestMove_Play(t *testing.T) {
+	_, players := setupTest(t, 2)
+
+	one := 1
+	err := players[0].Move(Move{
+		Type:   Play,
+		CardID: &one,
+	})
+	require.NoError(t, err)
+}
+
 type testServer struct {
 	T       *testing.T
 	Server  *Server
