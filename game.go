@@ -39,12 +39,12 @@ var Numbers = [...]int{1, 2, 3, 4, 5}
 type Move struct {
 	Type MoveType `json:"type"`
 	// for Hint:
-	ToPlayer string `json:"to_player"`
-	Color    *Color `json:"color,omitempty"`
-	Number   *int   `json:"number,omitempty"`
-	CardIds  []int  `json:"card_ids,omitempty"`
+	ToPlayer *string `json:"to_player,omitempty"`
+	Color    *Color  `json:"color,omitempty"`
+	Number   *int    `json:"number,omitempty"`
+	CardIds  []int   `json:"card_ids,omitempty"`
 	// for Play/Discard:
-	CardId int `json:"card_id"`
+	CardId *int `json:"card_id,omitempty"`
 }
 
 type Card struct {
@@ -137,7 +137,7 @@ type Game struct {
 	turns       []Turn
 	deck        Deck
 	hands       map[SessionToken][]Card
-	board       map[Color][]Card
+	board       map[Color][]Card // Stack for each color
 	bombs       int
 	hints       int
 	discard     []Card
