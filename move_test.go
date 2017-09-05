@@ -64,6 +64,13 @@ func TestMove_Play(t *testing.T) {
 		CardID: &one,
 	})
 	require.NoError(t, err)
+
+	eight := 8
+	err = players[1].Move(Move{
+		Type:   Play,
+		CardID: &eight,
+	})
+	require.NoError(t, err)
 }
 
 type testServer struct {

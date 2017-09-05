@@ -60,11 +60,17 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 		}
 		card := g.getCardFromHand(*move.CardID, session)
 		if card == nil {
-			return fmt.Errorf("Card #%v is not in your hand", move.CardID)
+			return fmt.Errorf("Card #%v is not in your hand", *move.CardID)
 		}
+
 		pile := g.board[card.Color]
-		topCard := pile[len(pile)-1]
-		if topCard.Number+1 == card.Number {
+		var topCard int
+		if len(pile) == 0 {
+			topCard = 0
+		} else {
+			topCard = pile[len(pile)-1].Number
+		}
+		if topCard+1 == card.Number {
 			// Hooray, well done!
 			if card.Number == 5 && g.hints < 8 {
 				// Grant a hint
@@ -86,8 +92,18 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 		// You get a new card!
 		newCard := g.DrawCard()
 		g.hands[session] = append(g.hands[session], *newCard)
+		g.turns = append(g.turns, Turn{
+			ID:     len(g.turns),
+			Player: playerName,
+			Move: Move{
+				Type:   Play,
+				CardID: move.CardID,
+			},
+			NewCard: newCard,
+		})
+		g.nextTurn()
 
-		return fmt.Errorf("TO BE ACCOMPLISHED")
+		return nil
 	case Discard:
 		return fmt.Errorf("TO BE ACCOMPLISHED")
 	case Hint:
@@ -98,9 +114,15 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 			return fmt.Errorf("unexpected CardID in HINT move")
 		}
 		turn := Turn{
-			ID:      len(g.turns),
-			Player:  playerName,
-			Move:    move,
+			ID:     len(g.turns),
+			Player: playerName,
+			Move: Move{
+				Type:     Hint,
+				ToPlayer: move.ToPlayer,
+				Color:    move.Color,
+				Number:   move.Number,
+				CardIDs:  move.CardIDs,
+			},
 			NewCard: nil,
 		}
 
@@ -203,24 +225,6 @@ func (g *Game) checkHint(toPlayer string, color *Color, number *int, cardIDs []i
 		if cardIDs2[i] != v {
 			return fmt.Errorf("invalid hint: got %v expected %v (at index %v)", cardIDs, cardIDsRef, i)
 		}
-	}
-	return nil
-}
-
-func (g *Game) checkCardColor(color Color) error {
-	switch color {
-	case Red, Yellow, Green, Blue, Black, White:
-	default:
-		return fmt.Errorf("invalid color: %v", color)
-	}
-	return nil
-}
-
-func (g *Game) checkCardNumber(number int) error {
-	switch number {
-	case 1, 2, 3, 4, 5:
-	default:
-		return fmt.Errorf("invalid number: %v", number)
 	}
 	return nil
 }

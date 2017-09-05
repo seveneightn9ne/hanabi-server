@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"fmt"
 	"sync"
 )
 
@@ -169,4 +170,22 @@ func (g *Game) nextTurn() {
 	if g.whoseTurn >= len(g.players) {
 		g.whoseTurn = 0
 	}
+}
+
+func (g *Game) checkCardColor(color Color) error {
+	switch color {
+	case Red, Yellow, Green, Blue, Black, White:
+	default:
+		return fmt.Errorf("invalid color: %v", color)
+	}
+	return nil
+}
+
+func (g *Game) checkCardNumber(number int) error {
+	switch number {
+	case 1, 2, 3, 4, 5:
+	default:
+		return fmt.Errorf("invalid number: %v", number)
+	}
+	return nil
 }
