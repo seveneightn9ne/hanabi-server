@@ -42,13 +42,13 @@ type Move struct {
 	ToPlayer *string `json:"to_player,omitempty"`
 	Color    *Color  `json:"color,omitempty"`
 	Number   *int    `json:"number,omitempty"`
-	CardIds  []int   `json:"card_ids,omitempty"`
+	CardIDs  []int   `json:"card_ids,omitempty"`
 	// for Play/Discard:
-	CardId *int `json:"card_id,omitempty"`
+	CardID *int `json:"card_id,omitempty"`
 }
 
 type Card struct {
-	Id     int   `json:"id"`
+	ID     int   `json:"id"`
 	Color  Color `json:"color"`
 	Number int   `json:"number"`
 }
@@ -56,29 +56,29 @@ type Card struct {
 // Card implements Cardy
 var _ Cardy = (*Card)(nil)
 
-func (f *Card) GetId() int {
-	return f.Id
+func (f *Card) GetID() int {
+	return f.ID
 }
 
 func (f *Card) Hide() HiddenCard {
 	return HiddenCard{
-		Id: f.Id,
+		ID: f.ID,
 	}
 }
 
 type HiddenCard struct {
-	Id int `json:"id"`
+	ID int `json:"id"`
 }
 
 // HiddenCard implements Cardy
 var _ Cardy = (*HiddenCard)(nil)
 
-func (h *HiddenCard) GetId() int {
-	return h.Id
+func (h *HiddenCard) GetID() int {
+	return h.ID
 }
 
 type Cardy interface {
-	GetId() int
+	GetID() int
 }
 type Deck []Card
 
@@ -93,7 +93,7 @@ func (g *Game) DrawCard() *Card {
 }
 
 type Turn struct {
-	Id     int    `json:"id"`     // turn number starting at 0
+	ID     int    `json:"id"`     // turn number starting at 0
 	Player string `json:"player"` // player that made the move
 	Move   Move   `json:"move"`
 	// no NewCard for Hint move
@@ -129,7 +129,7 @@ type Game struct {
 	// Immutable Fields
 	Name       string
 	NumPlayers int
-	cardsById  map[int]Card
+	cardsByID  map[int]Card
 
 	// Mutable, private fields
 	players     []SessionToken
@@ -153,10 +153,10 @@ func (g *Game) cardsInHand() int {
 
 // Removes the card from the hand!
 // Requires game is locked!
-func (g *Game) getCardFromHand(cardId int, player SessionToken) *Card {
+func (g *Game) getCardFromHand(cardID int, player SessionToken) *Card {
 	hand := g.hands[player]
 	for i, card := range hand {
-		if card.Id == cardId {
+		if card.ID == cardID {
 			g.hands[player] = append(hand[:i], hand[i+1:]...)
 			return &card
 		}

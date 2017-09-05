@@ -31,7 +31,7 @@ func StartGame(state *ServerState, req_ interface{}) interface{} {
 	if req.NumPlayers < 2 || req.NumPlayers > 5 {
 		return &StartGameResponse{"error", "must specify 2-5 players"}
 	}
-	deck, cardsById := newDeck()
+	deck, cardsByID := newDeck()
 	newGame := &Game{
 		Name:        req.Name,
 		players:     nil,
@@ -49,7 +49,7 @@ func StartGame(state *ServerState, req_ interface{}) interface{} {
 		bombs:     3,
 		hints:     8,
 		discard:   make([]Card, 0),
-		cardsById: cardsById,
+		cardsByID: cardsByID,
 		whoseTurn: 0,
 	}
 	state.Games[req.Name] = newGame
@@ -59,7 +59,7 @@ func StartGame(state *ServerState, req_ interface{}) interface{} {
 func newDeck() (Deck, map[int]Card) {
 	numCards := 5 * (3 + 2 + 2 + 2 + 1)
 	cards := make([]Card, numCards)
-	cardsById := make(map[int]Card, numCards)
+	cardsByID := make(map[int]Card, numCards)
 	order := rand.Perm(numCards)
 	p_i := 0
 	for _, color := range Colors {
@@ -67,14 +67,14 @@ func newDeck() (Deck, map[int]Card) {
 			dupe := []int{3, 2, 2, 2, 1}[n_i]
 			for d_i := 0; d_i < dupe; d_i++ {
 				cards[order[p_i]] = Card{
-					Id:     order[p_i],
+					ID:     order[p_i],
 					Color:  color,
 					Number: number,
 				}
-				cardsById[order[p_i]] = cards[order[p_i]]
+				cardsByID[order[p_i]] = cards[order[p_i]]
 				p_i++
 			}
 		}
 	}
-	return Deck(cards), cardsById
+	return Deck(cards), cardsByID
 }

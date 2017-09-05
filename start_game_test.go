@@ -23,8 +23,8 @@ func TestStartGame_Basic(t *testing.T) {
 	if len(game.deck) != correctNumCards {
 		t.Errorf("The deck should have %v cards but has %v", correctNumCards, len(game.deck))
 	}
-	if len(game.cardsById) != correctNumCards {
-		t.Errorf("cardsById should have %v cards but has %v", correctNumCards, len(game.cardsById))
+	if len(game.cardsByID) != correctNumCards {
+		t.Errorf("cardsByID should have %v cards but has %v", correctNumCards, len(game.cardsByID))
 	}
 	if game.whoseTurn != 0 {
 		t.Errorf("The turn should start at 0 but is %v", game.whoseTurn)

@@ -55,12 +55,12 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 
 	switch move.Type {
 	case Play:
-		if move.CardId == nil {
+		if move.CardID == nil {
 			return fmt.Errorf("missing required field card_id for move type PLAY")
 		}
-		card := g.getCardFromHand(*move.CardId, session)
+		card := g.getCardFromHand(*move.CardID, session)
 		if card == nil {
-			return fmt.Errorf("Card #%v is not in your hand", move.CardId)
+			return fmt.Errorf("Card #%v is not in your hand", move.CardID)
 		}
 		pile := g.board[card.Color]
 		topCard := pile[len(pile)-1]
@@ -94,11 +94,11 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 		if g.hints < 1 {
 			return fmt.Errorf("no hint credits available")
 		}
-		if move.CardId != nil {
-			return fmt.Errorf("unexpected CardId in HINT move")
+		if move.CardID != nil {
+			return fmt.Errorf("unexpected CardID in HINT move")
 		}
 		turn := Turn{
-			Id:      len(g.turns),
+			ID:      len(g.turns),
 			Player:  playerName,
 			Move:    move,
 			NewCard: nil,
@@ -108,7 +108,7 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 		if turn.Move.ToPlayer == nil {
 			return fmt.Errorf("hint missing required field 'to_player'")
 		}
-		err = g.checkHint(*turn.Move.ToPlayer, turn.Move.Color, turn.Move.Number, turn.Move.CardIds)
+		err = g.checkHint(*turn.Move.ToPlayer, turn.Move.Color, turn.Move.Number, turn.Move.CardIDs)
 		if err != nil {
 			return err
 		}
@@ -187,10 +187,10 @@ func (g *Game) checkHint(toPlayer string, color *Color, number *int, cardIDs []i
 	var cardIDsRef []int
 	for _, card := range g.hands[hintedSession] {
 		if color != nil && card.Color == *color {
-			cardIDsRef = append(cardIDsRef, card.Id)
+			cardIDsRef = append(cardIDsRef, card.ID)
 		}
 		if number != nil && card.Number == *number {
-			cardIDsRef = append(cardIDsRef, card.Id)
+			cardIDsRef = append(cardIDsRef, card.ID)
 		}
 	}
 	sort.Ints(cardIDsRef)
