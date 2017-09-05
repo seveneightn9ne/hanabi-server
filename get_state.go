@@ -32,7 +32,9 @@ func GetState(state *ServerState, req_ interface{}) interface{} {
 		return NewGetStateResponseError("Session token not found")
 	}
 
+	// Blocks iff req.Wait
 	gameState := getStateLoop(game, req.Session, req.Wait)
+
 	return &GetStateResponse{
 		Status: "ok",
 		State:  gameState,

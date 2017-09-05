@@ -39,6 +39,9 @@ func MoveHandler(state *ServerState, req_ interface{}) interface{} {
 }
 
 func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
+	g.Lock()
+	defer g.Unlock()
+
 	playerIndex, err := g.playerIndex(session)
 	if err != nil {
 		return err
