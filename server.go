@@ -26,7 +26,7 @@ func main() {
 	path = "/hanabi/get-state"
 	http.HandleFunc(path, server.MakeHandler(path, GetState, &GetStateRequest{}))
 	path = "/hanabi/move"
-	// TODO handle move
+	http.HandleFunc(path, server.MakeHandler(path, MoveHandler, &MoveRequest{}))
 	log.Fatal(http.ListenAndServe(serveStr, nil))
 }
 
