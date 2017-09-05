@@ -91,6 +91,9 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 		}
 		// You get a new card!
 		newCard := g.DrawCard()
+		if newCard == nil {
+			return fmt.Errorf("TODO: the deck's empty")
+		}
 		g.hands[session] = append(g.hands[session], *newCard)
 		g.turns = append(g.turns, Turn{
 			ID:     len(g.turns),
@@ -105,7 +108,33 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 
 		return nil
 	case Discard:
-		return fmt.Errorf("TO BE ACCOMPLISHED")
+		if move.CardID == nil {
+			return fmt.Errorf("missing required field card_id for move type DISCARD")
+		}
+		card := g.getCardFromHand(*move.CardID, session)
+		if card == nil {
+			return fmt.Errorf("Card #%v is not in your hand", *move.CardID)
+		}
+
+		g.discard = append(g.discard, *card)
+		// You get a new card!
+		newCard := g.DrawCard()
+		if newCard == nil {
+			return fmt.Errorf("TODO: the deck's empty")
+		}
+		g.hands[session] = append(g.hands[session], *newCard)
+		g.turns = append(g.turns, Turn{
+			ID:     len(g.turns),
+			Player: playerName,
+			Move: Move{
+				Type:   Discard,
+				CardID: move.CardID,
+			},
+			NewCard: newCard,
+		})
+		g.nextTurn()
+
+		return nil
 	case Hint:
 		if g.hints < 1 {
 			return fmt.Errorf("no hint credits available")

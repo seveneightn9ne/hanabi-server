@@ -73,6 +73,24 @@ func TestMove_Play(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestMove_Discard(t *testing.T) {
+	_, players := setupTest(t, 2)
+
+	one := 1
+	err := players[0].Move(Move{
+		Type:   Discard,
+		CardID: &one,
+	})
+	require.NoError(t, err)
+
+	eight := 8
+	err = players[1].Move(Move{
+		Type:   Discard,
+		CardID: &eight,
+	})
+	require.NoError(t, err)
+}
+
 type testServer struct {
 	T       *testing.T
 	Server  *Server
