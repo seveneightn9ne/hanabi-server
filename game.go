@@ -83,13 +83,19 @@ type Cardy interface {
 }
 type Deck []Card
 
-func (g *Game) DrawCard() *Card {
+// Draw card into session's hand
+func (g *Game) DrawCard(session SessionToken) *Card {
 	l := len(g.deck)
 	if l == 0 {
 		return nil
+	} else if l == 1 {
+		// Drawing the last card.
+		// Game will end in len(players) turns
+		g.turnsLeft = len(g.players) + 1
 	}
 	c := g.deck[l-1]
 	g.deck = g.deck[l-2:]
+	g.hands[session] = append(g.hands[session], c)
 	return &c
 }
 
@@ -143,6 +149,7 @@ type Game struct {
 	hints       int
 	discard     []Card
 	whoseTurn   int // Index into players. Use -1 when game is over
+	turnsLeft   int // Turns until game end. 0 means unlimited (last card hasn't been drawn)
 }
 
 func (g *Game) cardsInHand() int {
@@ -165,13 +172,6 @@ func (g *Game) getCardFromHand(cardID int, player SessionToken) *Card {
 	return nil
 }
 
-func (g *Game) nextTurn() {
-	g.whoseTurn++
-	if g.whoseTurn >= len(g.players) {
-		g.whoseTurn = 0
-	}
-}
-
 func (g *Game) checkCardColor(color Color) error {
 	switch color {
 	case Red, Yellow, Green, Blue, Black, White:
@@ -188,4 +188,38 @@ func (g *Game) checkCardNumber(number int) error {
 		return fmt.Errorf("invalid number: %v", number)
 	}
 	return nil
+}
+
+func (g *Game) Score() int {
+	score := 0
+	for _, pile := range g.board {
+		if len(pile) > 0 {
+			topCard := pile[len(pile)-1]
+			score += topCard.Number
+		}
+	}
+	return score
+}
+
+func (g *Game) commitTurn(turn Turn, gameOver bool) {
+	g.turns = append(g.turns, turn)
+	if g.turnsLeft == 1 || gameOver {
+		// This is the last turn, game over.
+		g.whoseTurn = -1
+		g.turnsLeft = 0
+		return
+	}
+	if g.turnsLeft > 0 {
+		g.turnsLeft--
+	}
+	if g.Score() == 25 {
+		// Game over because you win
+		g.whoseTurn = -1
+	}
+	if g.whoseTurn >= 0 {
+		g.whoseTurn++
+		if g.whoseTurn >= len(g.players) {
+			g.whoseTurn = 0
+		}
+	}
 }

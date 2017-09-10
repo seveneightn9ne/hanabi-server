@@ -55,6 +55,7 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 
 	switch move.Type {
 	case Play:
+		var gameOver bool
 		if move.CardID == nil {
 			return fmt.Errorf("missing required field card_id for move type PLAY")
 		}
@@ -81,7 +82,7 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 			// Oof, wrong card
 			if g.bombs == 1 {
 				// Last chance -- game over
-				// TODO(jessk) -- GAME OVER
+				gameOver = true
 			}
 
 			g.bombs -= 1
@@ -90,12 +91,8 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 			g.discard = append(g.discard, *card)
 		}
 		// You get a new card!
-		newCard := g.DrawCard()
-		if newCard == nil {
-			return fmt.Errorf("TODO: the deck's empty")
-		}
-		g.hands[session] = append(g.hands[session], *newCard)
-		g.turns = append(g.turns, Turn{
+		newCard := g.DrawCard(session)
+		g.commitTurn(Turn{
 			ID:     len(g.turns),
 			Player: playerName,
 			Move: Move{
@@ -103,8 +100,7 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 				CardID: move.CardID,
 			},
 			NewCard: newCard,
-		})
-		g.nextTurn()
+		}, gameOver)
 
 		return nil
 	case Discard:
@@ -118,12 +114,8 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 
 		g.discard = append(g.discard, *card)
 		// You get a new card!
-		newCard := g.DrawCard()
-		if newCard == nil {
-			return fmt.Errorf("TODO: the deck's empty")
-		}
-		g.hands[session] = append(g.hands[session], *newCard)
-		g.turns = append(g.turns, Turn{
+		newCard := g.DrawCard(session)
+		g.commitTurn(Turn{
 			ID:     len(g.turns),
 			Player: playerName,
 			Move: Move{
@@ -131,8 +123,7 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 				CardID: move.CardID,
 			},
 			NewCard: newCard,
-		})
-		g.nextTurn()
+		}, false /* gameOver */)
 
 		return nil
 	case Hint:
@@ -166,8 +157,7 @@ func (g *Game) lockingMove(session SessionToken, move Move) (err error) {
 
 		// commit
 		g.hints--
-		g.turns = append(g.turns, turn)
-		g.nextTurn()
+		g.commitTurn(turn, false /* gameOver */)
 		return nil
 	default:
 		return fmt.Errorf("unrecognized move type: %v", move.Type)
