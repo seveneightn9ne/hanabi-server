@@ -73,10 +73,18 @@ func NewServer() *Server {
 func (s *Server) MakeHandler(path string, f func(*ServerState, interface{}) interface{}, requestStruct interface{}) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		log.Printf("Request to %v", req.URL.Path)
+		if req.Method != "POST" {
+			err := fmt.Errorf("request type %v != POST", req.Method)
+			handleErr(err, w)
+			return
+		}
 		dec := json.NewDecoder(req.Body)
 		var response interface{}
 		var err error
-		if err = dec.Decode(&requestStruct); handleErr(err, w) {
+		err = dec.Decode(&requestStruct)
+		if err != nil {
+			err = fmt.Errorf("error decoding request: %v", err)
+			handleErr(err, w)
 			return
 		}
 		response = f(&s.state, requestStruct)

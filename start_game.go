@@ -1,6 +1,9 @@
 package main
 
-import "math/rand"
+import (
+	"log"
+	"math/rand"
+)
 
 type StartGameRequest struct {
 	NumPlayers int    `json:"num_players"`
@@ -53,6 +56,7 @@ func StartGame(state *ServerState, req_ interface{}) interface{} {
 		whoseTurn: 0,
 	}
 	state.Games[req.Name] = newGame
+	log.Printf("Started game: %v", req.Name)
 	return &StartGameResponse{"ok", ""}
 }
 
