@@ -21,6 +21,10 @@ func TestJoinGame_Basic(t *testing.T) {
 	if len(game.players) != 1 {
 		t.Errorf("The game should have 1 player but has %v", len(game.players))
 	}
+	response = JoinGame(&serverState, &request).(*JoinGameResponse)
+	if response.Status == "ok" {
+		t.Errorf("Expected an error when adding a duplicate player")
+	}
 	request.PlayerName = "player2"
 	response = JoinGame(&serverState, &request).(*JoinGameResponse)
 	if response.Status == "error" {
