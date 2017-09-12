@@ -63,7 +63,7 @@ func (g *Game) getState(session SessionToken, turnCursor int) GameStateSummary {
 	for _, s := range g.players {
 		resp.Players = append(resp.Players, g.playerNames[s])
 	}
-	resp.Board = g.board
+	resp.Board = g.exportBoard()
 	resp.Discard = g.discard
 	resp.Hand = g.hiddenPlayerHand(session)
 	resp.OtherHands = g.otherHands(session)
@@ -71,6 +71,9 @@ func (g *Game) getState(session SessionToken, turnCursor int) GameStateSummary {
 	if len(g.players) < g.NumPlayers {
 		// Game has not started yet
 		resp.State = NotStarted
+		if len(resp.Turns) == 0 {
+			resp.Turns = []Turn{}
+		}
 		return resp
 	} else if g.whoseTurn == -1 {
 		resp.State = Finished
@@ -80,8 +83,23 @@ func (g *Game) getState(session SessionToken, turnCursor int) GameStateSummary {
 		resp.State = WaitingForTurn
 	}
 	resp.Turns = g.turns[turnCursor:]
+	if len(resp.Turns) == 0 {
+		resp.Turns = []Turn{}
+	}
 	resp.TurnCursor = len(g.turns)
 	return resp
+}
+
+func (g *Game) exportBoard() map[Color][]Card {
+	res := make(map[Color][]Card)
+	for k, v := range g.board {
+		if len(v) == 0 {
+			res[k] = []Card{}
+		} else {
+			res[k] = v
+		}
+	}
+	return res
 }
 
 // The hands of the players _except_ the specified player.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 )
 
 type JoinGameRequest struct {
@@ -42,6 +43,7 @@ func JoinGame(state *ServerState, req_ interface{}) interface{} {
 		return NewJoinGameResponseError(err.Error())
 	}
 	state.addSession(session, game)
+	log.Printf("Player joined %v -> %v", req.PlayerName, req.GameName)
 	return &JoinGameResponse{
 		Status:  "ok",
 		Session: session,
